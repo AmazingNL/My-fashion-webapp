@@ -1,5 +1,7 @@
 <?php
 
+namespace app\models;
+
 use app\models\User;
 use app\models\OrderStatus;
 

@@ -1,17 +1,19 @@
 <?php
 
+namespace app\models;
+
 use app\models\Product;
 
 class ProductVariant {
     private $variantId;
-    private $productId; 
+    private $product;
     private $size;
     private $color;
     private $stock;
 
     public function __construct($variantId, Product $product, $size, $color, $stock) {
         $this->variantId = $variantId;
-        $this->productId = $product->getId(); 
+        $this->product = $product; 
         $this->size = $size;
         $this->color = $color;
         $this->stock = $stock;
@@ -21,8 +23,8 @@ class ProductVariant {
         return $this->variantId;
     }
 
-    public function getProductId() {
-        return $this->productId;
+    public function getProduct() {
+        return $this->product;
     }
 
     public function getSize() {

@@ -1,35 +1,35 @@
 <?php
 
+namespace app\models;
+
 use app\models\Order;
 use app\models\ProductVariant;
 
 class OrderItem {
     private $orderItemId;
-    private $orderId;
-    private $productVariantId;
+    private $order;
+    private $productVariant;
     private $quantity;
     private $price;
-    private $lineTotal;
 
-    public function __construct($orderItemId, Order $order, ProductVariant $productVariant, $quantity, $price, $lineTotal) {
+    public function __construct($orderItemId, Order $order, ProductVariant $productVariant, $quantity, $price) {
         $this->orderItemId = $orderItemId;
-        $this->orderId = $order->getOrderId();
-        $this->productVariantId = $productVariant->getVariantId();
+        $this->order = $order;
+        $this->productVariant = $productVariant;
         $this->quantity = $quantity;
         $this->price = $price;
-        $this->lineTotal = $lineTotal;  
     }
 
     public function getOrderItemId() {
         return $this->orderItemId;
     }
 
-    public function getOrderId() {
-        return $this->orderId;
+    public function getOrder() {
+        return $this->order;
     }
 
-    public function getProductVariantId() {
-        return $this->productVariantId;
+    public function getProductVariant() {
+        return $this->productVariant;
     }
 
     public function getQuantity() {
@@ -40,6 +40,6 @@ class OrderItem {
         return $this->price;
     }
     public function getLineTotal() {
-        return $this->lineTotal;
+        return $this->$quantity * $this->price;
     }   
 }

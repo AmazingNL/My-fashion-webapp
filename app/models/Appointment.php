@@ -1,5 +1,7 @@
 <?php
 
+namespace app\models;
+
 use app\models\User;
 use app\models\AppointmentStatus;
 
@@ -11,7 +13,7 @@ class Appointment {
     private $note;
     private $createdAt;
     private $updatedAt;
-    
+
     public function __construct($appointmentId, User $customerId, $date, AppointmentStatus $status, $note, $createdAt, $updatedAt) {
         $this->appointmentId = $appointmentId;
         $this->customerId = $customerId->getId();

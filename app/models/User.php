@@ -1,5 +1,7 @@
 <?php
 
+namespace app\models;
+
 class User {
     private $id;
     private $firstName;
@@ -38,4 +40,25 @@ class User {
     public function getEmail() {
         return $this->email;
     }
+
+    public function getPassword() {
+        return $this->password;
+    }
+
+    public function getPhone() {
+        return $this->phone;
+    }
+
+    public function getRole() {
+        return $this->role;
+    }
+
+    public function getCreatedAt() {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt() {
+        return $this->updatedAt;
+    }
+
 }
