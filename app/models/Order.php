@@ -1,9 +1,9 @@
 <?php
 
-namespace app\models;
+namespace App\Models;
 
-use app\models\User;
-use app\models\OrderStatus;
+use App\Models\User;
+use App\Models\OrderStatus;
 
 class Order {
     private $orderId;

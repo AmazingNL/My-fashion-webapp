@@ -1,9 +1,9 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\AppointmentSlot;
-use app\models\Appointment;
+use App\Models\AppointmentSlot;
+use App\Models\Appointment;
 
 interface IAppointmentSlotRepository {
 

@@ -1,10 +1,10 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\Order;
-use app\repositories\IOrderRepository;
-use app\core\RepositoryBase;
+use App\Models\Order;
+use App\Repositories\IOrderRepository;
+use App\Core\RepositoryBase;
 
 
 class OrderRepository extends RepositoryBase implements IOrderRepository {

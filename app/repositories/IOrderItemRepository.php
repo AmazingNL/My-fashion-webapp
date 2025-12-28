@@ -1,8 +1,8 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\OrderItem;
+use App\Models\OrderItem;
 
 interface IOrderItemRepository {
 

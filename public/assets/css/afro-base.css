@@ -1,0 +1,314 @@
+/**
+ * public/assets/css/afro-base.css
+ *
+ * @format
+ */
+
+:root {
+	--primary: #7c3aed;
+	--primary2: #a855f7;
+	--accent: #fbbf24;
+
+	--bg: #0b0614;
+	--card: rgba(255, 255, 255, 0.08);
+	--card2: rgba(255, 255, 255, 0.05);
+
+	--text: #f6f1ff;
+	--muted: rgba(246, 241, 255, 0.74);
+	--line: rgba(246, 241, 255, 0.14);
+
+	--shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+	--radius: 22px;
+
+	--focus: 0 0 0 4px rgba(124, 58, 237, 0.18);
+}
+
+* {
+	box-sizing: border-box;
+}
+html,
+body {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+		"Noto Sans", sans-serif;
+	color: var(--text);
+	background: radial-gradient(
+			1100px 700px at 18% 10%,
+			rgba(124, 58, 237, 0.22),
+			transparent 60%
+		),
+		radial-gradient(
+			900px 600px at 92% 22%,
+			rgba(168, 85, 247, 0.18),
+			transparent 55%
+		),
+		radial-gradient(
+			1000px 700px at 50% 95%,
+			rgba(251, 191, 36, 0.12),
+			transparent 55%
+		),
+		var(--bg);
+}
+
+/* ---------- Layout helpers ---------- */
+.af-shell {
+	min-height: 100vh;
+	padding: clamp(18px, 4vw, 44px);
+	display: grid;
+	place-items: center;
+	position: relative;
+	overflow: hidden;
+}
+
+/* soft pattern overlay */
+.af-shell::before {
+	content: "";
+	position: absolute;
+	inset: -220px;
+	background: linear-gradient(
+			45deg,
+			rgba(124, 58, 237, 0.1) 0 10px,
+			transparent 10px 22px
+		),
+		linear-gradient(
+			-45deg,
+			rgba(251, 191, 36, 0.06) 0 10px,
+			transparent 10px 22px
+		);
+	background-size: 44px 44px;
+	opacity: 0.55;
+	transform: rotate(6deg);
+	pointer-events: none;
+}
+
+.af-wrap {
+	width: min(1040px, 100%);
+	position: relative;
+	z-index: 1;
+}
+
+/* ---------- Card ---------- */
+.af-card {
+	border-radius: var(--radius);
+	padding: clamp(18px, 3vw, 28px);
+	box-shadow: var(--shadow);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: linear-gradient(180deg, var(--card), var(--card2));
+	backdrop-filter: blur(12px);
+}
+
+.af-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	border-radius: 999px;
+	border: 1px solid rgba(124, 58, 237, 0.45);
+	background: rgba(124, 58, 237, 0.12);
+	color: rgba(246, 241, 255, 0.95);
+	font-weight: 800;
+	letter-spacing: 0.2px;
+}
+
+/* ---------- Typography ---------- */
+.af-title {
+	margin: 12px 0 6px;
+	font-size: clamp(28px, 4vw, 44px);
+	line-height: 1.05;
+}
+
+.af-subtitle {
+	margin: 0 0 16px;
+	color: var(--muted);
+	max-width: 60ch;
+}
+
+.af-h2 {
+	margin: 0 0 6px;
+	font-size: 22px;
+}
+
+.af-p {
+	margin: 0 0 18px;
+	color: var(--muted);
+}
+
+/* ---------- Form ---------- */
+.af-form {
+	margin-top: 6px;
+}
+
+.af-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+}
+
+.af-full {
+	grid-column: 1 / -1;
+}
+
+.af-field {
+	position: relative;
+	background: rgba(0, 0, 0, 0.22);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 16px;
+	transition: border-color 0.18s ease, transform 0.18s ease,
+		background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.af-input {
+	width: 100%;
+	border: 0;
+	outline: 0;
+	padding: 18px 14px 12px;
+	background: transparent;
+	color: var(--text);
+	font-size: 15px;
+}
+
+.af-label {
+	position: absolute;
+	left: 14px;
+	top: 14px;
+	color: rgba(246, 241, 255, 0.72);
+	font-size: 13px;
+	pointer-events: none;
+	transition: transform 0.16s ease, opacity 0.16s ease, top 0.16s ease;
+	opacity: 0.92;
+}
+
+/* floating label */
+.af-input:focus + .af-label,
+.af-input:not(:placeholder-shown) + .af-label {
+	top: 8px;
+	opacity: 0.86;
+	transform: scale(0.92);
+}
+
+.af-field:focus-within {
+	border-color: rgba(124, 58, 237, 0.65);
+	background: rgba(0, 0, 0, 0.28);
+	transform: translateY(-1px);
+	box-shadow: var(--focus);
+}
+
+/* password toggle */
+.af-toggle {
+	position: absolute;
+	right: 10px;
+	top: 10px;
+	padding: 8px 10px;
+	border-radius: 999px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.06);
+	color: rgba(246, 241, 255, 0.9);
+	cursor: pointer;
+	transition: transform 0.15s ease, background 0.15s ease,
+		border-color 0.15s ease;
+}
+.af-toggle:hover {
+	transform: translateY(-1px);
+	background: rgba(255, 255, 255, 0.1);
+	border-color: rgba(124, 58, 237, 0.45);
+}
+
+/* ---------- Buttons ---------- */
+.af-btn {
+	width: 100%;
+	margin-top: 14px;
+	padding: 14px 16px;
+	border-radius: 16px;
+	border: 1px solid rgba(124, 58, 237, 0.55);
+	background: linear-gradient(
+		135deg,
+		rgba(124, 58, 237, 0.95),
+		rgba(168, 85, 247, 0.92)
+	);
+	color: #120a22;
+	font-weight: 900;
+	letter-spacing: 0.2px;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	transition: transform 0.16s ease, filter 0.16s ease;
+}
+.af-btn:hover {
+	transform: translateY(-1px);
+	filter: brightness(1.03);
+}
+.af-btn:active {
+	transform: translateY(0);
+}
+.af-btn[disabled] {
+	opacity: 0.75;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.af-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	background: rgba(18, 10, 34, 0.78);
+	box-shadow: 0 0 0 6px rgba(18, 10, 34, 0.12);
+}
+
+/* ---------- Links / meta row ---------- */
+.af-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-top: 12px;
+	color: rgba(246, 241, 255, 0.82);
+}
+
+.af-link {
+	color: rgba(251, 191, 36, 0.95);
+	text-decoration: none;
+	border-bottom: 1px dashed rgba(251, 191, 36, 0.45);
+}
+.af-link:hover {
+	border-bottom-style: solid;
+}
+
+.af-mini {
+	margin: 14px 0 0;
+	text-align: center;
+	color: rgba(246, 241, 255, 0.78);
+	font-size: 14px;
+}
+
+/* ---------- Alerts ---------- */
+.af-alert {
+	margin-top: 14px;
+	padding: 12px 12px;
+	border-radius: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(0, 0, 0, 0.22);
+	color: rgba(246, 241, 255, 0.92);
+}
+
+.af-alert--error {
+	border-color: rgba(255, 90, 120, 0.35);
+	background: rgba(120, 20, 40, 0.25);
+}
+
+.af-alert--success {
+	border-color: rgba(90, 255, 170, 0.25);
+	background: rgba(20, 120, 70, 0.22);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 520px) {
+	.af-grid {
+		grid-template-columns: 1fr;
+	}
+}

@@ -1,11 +1,11 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\Product;
-use app\models\ProductVariant;
-use app\repositories\IProductVariantRepository;
-use app\core\RepositoryBase;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Repositories\IProductVariantRepository;
+use App\Core\RepositoryBase;
 
 class ProductVariantRepository extends RepositoryBase implements IProductVariantRepository {
     public function getAll(): array

@@ -1,20 +1,23 @@
 <?php
 
-namespace app\services;
+namespace App\Services;
 
-use app\models\product;
-use app\models\ProductVariant;
-use app\repositories\IProductRepository;
-use app\services\IProductService;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Repositories\IProductRepository;
+use App\Services\IProductService;
 
-class ProductService implements IProductService {
+class ProductService implements IProductService
+{
     private IProductRepository $productRepository;
 
-    public function __construct(IProductRepository $productRepository) {
+    public function __construct(IProductRepository $productRepository)
+    {
         $this->productRepository = $productRepository;
     }
 
-    public function getAllProducts(): array {
+    public function getAllProducts(): array
+    {
         try {
             return $this->productRepository->getAll();
         } catch (\Exception $e) {
@@ -23,16 +26,22 @@ class ProductService implements IProductService {
 
     }
 
-    public function createProduct(Product $product): bool {
-        try {
-            $this->productRepository->save($product);
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }   
-    }
+public function createProduct(Product $product): array
+{
+    $errors = [];
 
-    public function getProductById($id): ?Product {
+    if (trim((string)$product->getName()) === '') $errors['error'] = 'Name is required.';
+    if ($product->getPrice() <= 0) $errors['error'] = 'Price must be greater than 0.';
+    if ($product->getStock() < 0) $errors['error'] = 'Stock cannot be negative.';
+
+    if ($errors) return $errors;
+
+    $this->productRepository->save($product);
+    return [];
+}
+
+    public function getProductById($id): ?Product
+    {
         try {
             return $this->productRepository->findById($id);
         } catch (\Exception $e) {
@@ -40,7 +49,8 @@ class ProductService implements IProductService {
         }
     }
 
-    public function getProductByName($name): ?Product {
+    public function getProductByName($name): ?Product
+    {
         try {
             return $this->productRepository->findByName($name);
         } catch (\Exception $e) {
@@ -48,7 +58,8 @@ class ProductService implements IProductService {
         }
     }
 
-    public function getProductsByCategory($category): array {
+    public function getProductsByCategory($category): array
+    {
         try {
             return $this->productRepository->findByCategory($category);
         } catch (\Exception $e) {
@@ -56,20 +67,23 @@ class ProductService implements IProductService {
         }
     }
 
-    public function updateProduct(Product $product): bool {
+    public function updateProduct(Product $product): array
+    {
         try {
             $this->productRepository->update($product);
-            return true;
+            return ['success' => 'Product updated successfully'];
         } catch (\Exception $e) {
-            return false;
+            return ['error' => 'Failed to update product'];
         }
     }
 
-    public function deleteProduct($id): bool {
+    public function deleteProduct($id): array
+    {
         try {
             $this->productRepository->findById($id);
+            return ['success' => 'Product deleted successfully'];
         } catch (\Exception $e) {
-            return false;
-        }   
+            return ['error' => 'Product not found'];
+        }
     }
 }

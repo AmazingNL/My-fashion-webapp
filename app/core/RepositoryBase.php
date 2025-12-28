@@ -1,28 +1,34 @@
 <?php
 
-namespace App\core;
+namespace App\Core;
 
-use app\config;
+use App\Config;
 use PDO;
 
-class RepositoryBase {
+class RepositoryBase
+{
     // Repository code here
 
     protected PDO $connection;
 
-    public function __construct() {
-        
+    public function __construct()
+    {
+
         $config = new Config();
 
-        $this -> connection = new PDO(
-            'mysql:host='. $config::DB_SERVER_NAME 
-            . ';dbname=' . $config::DB_NAME . ';charset=utf8mb4';
-        ) 
+        $this->connection = new PDO(
+            'mysql:host=' . $config::DB_SERVER_NAME
+            . ';dbname=' . $config::DB_NAME . ';charset=utf8mb4',
+            $config::DB_USERNAME,
+            $config::DB_PASSWORD,
+        
+        );
 
         $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    public function getConnection(): PDO {
+    public function getConnection(): PDO
+    {
         return $this->connection;
     }
 }

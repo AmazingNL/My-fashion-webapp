@@ -1,10 +1,10 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\Appointment;
-use app\repositories\IAppointmentRepository;
-use app\core\RepositoryBase;
+use App\Models\Appointment;
+use App\Repositories\IAppointmentRepository;
+use App\Core\RepositoryBase;
 
 class AppointmentRepository extends RepositoryBase implements IAppointmentRepository {
 

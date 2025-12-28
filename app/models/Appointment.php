@@ -1,9 +1,9 @@
 <?php
 
-namespace app\models;
+namespace App\Models;
 
-use app\models\User;
-use app\models\AppointmentStatus;
+use App\Models\User;
+use App\Models\AppointmentStatus;
 
 class Appointment {
     private $appointmentId;

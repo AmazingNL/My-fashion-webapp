@@ -1,8 +1,8 @@
 <?php
 
-namespace app\models;
+namespace App\Models;
 
-use app\models\Product;
+use App\Models\Product;
 
 class ProductVariant {
     private $variantId;

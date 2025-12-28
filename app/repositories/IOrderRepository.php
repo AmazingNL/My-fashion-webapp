@@ -1,8 +1,8 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\Order;
+use App\Models\Order;
 
 interface IOrderRepository {
     public function getAll(): array;

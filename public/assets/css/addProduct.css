@@ -1,0 +1,251 @@
+/** @format */
+
+:root {
+	/* Primary purple */
+	--primary: #7c3aed;
+	--primary2: #a855f7;
+	--accent: #fbbf24;
+
+	--bg: #0b0614;
+	--card: rgba(255, 255, 255, 0.08);
+	--card2: rgba(255, 255, 255, 0.05);
+	--text: #f6f1ff;
+	--muted: rgba(246, 241, 255, 0.74);
+	--line: rgba(246, 241, 255, 0.14);
+
+	--shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+	--radius: 22px;
+}
+
+* {
+	box-sizing: border-box;
+}
+html,
+body {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+	color: var(--text);
+	background: radial-gradient(
+			1100px 700px at 20% 10%,
+			rgba(124, 58, 237, 0.22),
+			transparent 60%
+		),
+		radial-gradient(
+			900px 600px at 90% 25%,
+			rgba(168, 85, 247, 0.18),
+			transparent 55%
+		),
+		radial-gradient(
+			1000px 700px at 50% 95%,
+			rgba(251, 191, 36, 0.12),
+			transparent 55%
+		),
+		var(--bg);
+}
+
+/* ---------- Page shell ---------- */
+.shell {
+	min-height: 100vh;
+	padding: clamp(18px, 4vw, 44px);
+	display: grid;
+	place-items: center;
+	position: relative;
+	overflow: hidden;
+}
+
+.shell::before {
+	content: "";
+	position: absolute;
+	inset: -220px;
+	background: linear-gradient(
+			45deg,
+			rgba(124, 58, 237, 0.1) 0 10px,
+			transparent 10px 22px
+		),
+		linear-gradient(
+			-45deg,
+			rgba(251, 191, 36, 0.06) 0 10px,
+			transparent 10px 22px
+		);
+	background-size: 44px 44px;
+	opacity: 0.55;
+	transform: rotate(6deg);
+	pointer-events: none;
+}
+
+.panel {
+	width: min(1040px, 100%);
+	border-radius: var(--radius);
+	padding: clamp(18px, 3vw, 28px);
+	box-shadow: var(--shadow);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(12px);
+	background: linear-gradient(
+		180deg,
+		rgba(255, 255, 255, 0.1),
+		rgba(255, 255, 255, 0.05)
+	);
+	position: relative;
+	z-index: 1;
+}
+
+/* ---------- Header ---------- */
+.header {
+	display: flex;
+	justify-content: space-between;
+	gap: 14px;
+	margin-bottom: 18px;
+}
+.header h1 {
+	margin: 6px 0;
+}
+.header p {
+	margin: 0;
+	color: var(--muted);
+}
+
+.badge {
+	display: inline-flex;
+	padding: 8px 12px;
+	border-radius: 999px;
+	border: 1px solid rgba(124, 58, 237, 0.45);
+	background: rgba(124, 58, 237, 0.12);
+	font-weight: 700;
+}
+
+/* ---------- Form ---------- */
+.form {
+	display: grid;
+	gap: 14px;
+}
+
+.form__grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+}
+
+.field {
+	position: relative;
+	background: rgba(0, 0, 0, 0.22);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 16px;
+}
+
+.field--full {
+	grid-column: 1 / -1;
+}
+
+.field input,
+.field textarea,
+.field select {
+	width: 100%;
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	padding: 18px 14px 12px;
+	outline: none;
+}
+
+.field textarea {
+	min-height: 120px;
+	resize: vertical;
+}
+
+.field label {
+	position: absolute;
+	left: 14px;
+	top: 14px;
+	font-size: 13px;
+	color: rgba(246, 241, 255, 0.7);
+	pointer-events: none;
+	transition: 0.16s;
+}
+
+.field :is(input, textarea, select):focus + label,
+.field :is(input, textarea, select):not(:placeholder-shown) + label {
+	top: 6px;
+	transform: scale(0.9);
+}
+
+.field:focus-within {
+	border-color: rgba(124, 58, 237, 0.65);
+	box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+}
+
+/* ---------- Buttons ---------- */
+.actions {
+	display: flex;
+	gap: 12px;
+	margin-top: 12px;
+	flex-wrap: wrap;
+}
+
+.btn {
+	padding: 14px 18px;
+	border-radius: 16px;
+	border: 1px solid rgba(124, 58, 237, 0.55);
+	background: linear-gradient(
+		135deg,
+		rgba(124, 58, 237, 0.95),
+		rgba(168, 85, 247, 0.92)
+	);
+	color: #120a22;
+	font-weight: 800;
+	cursor: pointer;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.32);
+}
+
+.btn--ghost {
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--text);
+	border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- Preview ---------- */
+.preview {
+	display: grid;
+	grid-template-columns: 100px 1fr;
+	gap: 12px;
+	padding: 12px;
+	border-radius: 16px;
+	background: rgba(0, 0, 0, 0.22);
+}
+
+.preview img {
+	width: 100px;
+	height: 100px;
+	object-fit: cover;
+	border-radius: 14px;
+}
+
+/* ---------- Notices ---------- */
+.notice {
+	padding: 12px;
+	border-radius: 14px;
+	margin-top: 12px;
+}
+.notice--error {
+	background: rgba(120, 20, 40, 0.25);
+}
+.notice--success {
+	background: rgba(20, 120, 70, 0.22);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+	.form__grid {
+		grid-template-columns: 1fr;
+	}
+	.header {
+		flex-direction: column;
+	}
+}

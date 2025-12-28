@@ -1,12 +1,12 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\OrderItem;
-use app\models\Order;
-use app\models\ProductVariant;
-use app\repositories\IOrderItemRepository;
-use app\core\RepositoryBase;
+use App\Models\OrderItem;
+use App\Models\Order;
+use App\Models\ProductVariant;
+use App\Repositories\IOrderItemRepository;
+use App\Core\RepositoryBase;
 
 class OrderItemRepository extends RepositoryBase implements IOrderItemRepository {
 

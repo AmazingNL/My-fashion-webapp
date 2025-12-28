@@ -1,11 +1,12 @@
 <?php
 
-namespace app\repositories;
-use app\models\Product;
+namespace App\Repositories;
+use App\Models\Product;
 
 interface IProductRepository {
 
     public function getAll(): array;
+    public function getAllActive(): array;
     public function findById($id): ?Product;
     public function findByName($name): ?Product;
     public function findByCategory($category): array;

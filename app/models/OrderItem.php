@@ -1,9 +1,9 @@
 <?php
 
-namespace app\models;
+namespace App\Models;
 
-use app\models\Order;
-use app\models\ProductVariant;
+use App\Models\Order;
+use App\Models\ProductVariant;
 
 class OrderItem {
     private $orderItemId;

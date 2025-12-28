@@ -1,9 +1,12 @@
 <?php
 
+session_start();
+
 require __DIR__ . '/../vendor/autoload.php';
 
-use FastRoute\RouteController;
-use function FastRoute\simpleDispatcher;
+use \App\Core\Router;
 
-$dispatcher = simpleDispatcher(function (RouteController $routerController))
-    $routerController('GET', '/', ['App\Controllers\'])
+$router = new Router();
+$router->dispatch();
+
+?>

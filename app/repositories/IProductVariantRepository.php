@@ -1,9 +1,9 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\Product;
-use app\models\ProductVariant;
+use App\Models\Product;
+use App\Models\ProductVariant;
 
 interface IProductVariantRepository {
     public function getAll(): array;
