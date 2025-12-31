@@ -35,7 +35,7 @@ class UserService extends RepositoryBase implements IUserService
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
         $userToSave = new User(
-            $user->getId(),
+            $user->getUserId(),
             $user->getFirstName(),
             $user->getLastName(),
             strtolower(trim($user->getEmail())),
@@ -76,18 +76,22 @@ class UserService extends RepositoryBase implements IUserService
 
     public function authenticateUser($email, $password): ?User
     {
-        try {
-            $user = $this->userRepository->findByEmail($email);
-            if ($user->getEmail() === null) {
-                return null;
-            }
-            if ($user && password_verify($password, $user->getPassword())) {
-                return $user;
-            }
-        } catch (\Exception $e) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;
         }
+
+        $user = $this->userRepository->findByEmail($email);
+        if (empty($user)) {                 
+            return null;
+        }
+
+        if (!password_verify($password, $user->getPassword())) {
+            return null;
+        }
+
+        return $user;
     }
+
 
     public function getUserById($id): ?User
     {

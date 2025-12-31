@@ -29,6 +29,8 @@
             </header>
 
             <form id="registerForm" class="form" action="/registerUser" method="post" novalidate>
+                <?= $this->csrfField(); ?>
+
                 <div class="form__grid">
                     <div class="field">
                         <input id="firstName" name="firstName" placeholder=" " autocomplete="given-name" required />
@@ -36,7 +38,7 @@
                     </div>
 
                     <div class="field">
-                        <input id="lastName" name="lastName" placeholder=" " autocomplete="family-name" required/>
+                        <input id="lastName" name="lastName" placeholder=" " autocomplete="family-name" required />
                         <label for="lastName">Last name</label>
                     </div>
 
@@ -46,13 +48,13 @@
                     </div>
 
                     <div class="field field--full">
-                        <input id="phone" name="phone" placeholder=" " autocomplete="tel" required/>
+                        <input id="phone" name="phone" placeholder=" " autocomplete="tel" required />
                         <label for="phone">Phone</label>
                     </div>
 
                     <div class="field field--full">
-                        <input id="password" name="password" type="password" placeholder=" "
-                            autocomplete="new-password" required/>
+                        <input id="password" name="password" type="password" placeholder=" " autocomplete="new-password"
+                            required />
                         <label for="password">Password</label>
 
                         <button class="field__toggle" type="button" data-toggle="password"

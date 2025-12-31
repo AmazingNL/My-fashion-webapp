@@ -16,37 +16,37 @@ class AuthController extends ControllerBase {
         $this->render('Users/Login', ['title' => 'Login']);
     }
 
-    public function login() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+public function login(): void
+{
+    $this->validateCsrf();
+
+    $email = trim((string) $this->input('email', ''));
+    $password = (string) $this->input('password', '');
+
+    try {
+        if ($email === '' || $password === '') {
+            $this->jsonResponse(['error' => 'Email and password are required.'], 400);
+            return;
         }
 
-        $email = trim($this->input('email', ''));
-        $password = (string) $this->input('password', '');
+        $user = $this->userService->authenticateUser($email, $password);
 
-        try {
-            if (empty($email) || empty($password)) {
-                $this->jsonResponse(['error' => 'Email and password are required.'], 400);
-                return;
-            }
-            $result = $this->userService->authenticateUser($email, $password);
-            if ($result instanceof \App\Models\User) {
-            $_SESSION['user_id'] = $result->getId();
-            $this->redirect('/productCatalogues');
-            return;
-            } else {
-            // Render login form with error
+        if (empty($user)) {
             $this->jsonResponse(['error' => 'Invalid email or password.'], 401);
             return;
-            }
-        }catch (\Throwable $e) {
-            $this->jsonResponse(
-                ['error' => 'An unexpected error occurred. Please try again later.'],
-                500
-            );
-            return;
         }
+
+        $_SESSION['user_id'] = $user->getUserId(); // or getUserId()
+        $this->jsonResponse(['ok' => true, 'redirect' => '/products'], 200);
+    } catch (\Throwable $e) {
+        error_log($e);
+        $this->jsonResponse(
+            ['error' => 'An unexpected error occurred. Please try again later.'. $e->getMessage()],
+            500
+        );
     }
+}
+
 
     public function logout() {
         session_start();

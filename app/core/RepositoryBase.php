@@ -20,7 +20,7 @@ class RepositoryBase
             'mysql:host=' . $config::DB_SERVER_NAME
             . ';dbname=' . $config::DB_NAME . ';charset=utf8mb4',
             $config::DB_USERNAME,
-            $config::DB_PASSWORD,
+            $config::DB_PASSWORD
         
         );
 
@@ -30,5 +30,31 @@ class RepositoryBase
     public function getConnection(): PDO
     {
         return $this->connection;
+    }
+
+
+      /* ============================
+       TRANSACTION HELPERS
+       ============================ */
+
+    public function beginTransaction(): void
+    {
+        if (!$this->connection->inTransaction()) {
+            $this->connection->beginTransaction();
+        }
+    }
+
+    public function commit(): void
+    {
+        if ($this->connection->inTransaction()) {
+            $this->connection->commit();
+        }
+    }
+
+    public function rollBack(): void
+    {
+        if ($this->connection->inTransaction()) {
+            $this->connection->rollBack();
+        }
     }
 }

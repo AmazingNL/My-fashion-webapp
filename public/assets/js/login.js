@@ -69,13 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			// If your controller redirects on success, fetch follows it.
 			// When it does, res.redirected is true and res.url is the final page.
-			if (res.redirected) {
-				showSuccess("Taking you to the catalogue…");
-				window.location.href = res.url; // usually /productCatalogues
-				return;
-			}
-
-			// Otherwise, it should be JSON with { error: "..." }
+			// ...after the fetch
 			const data = await res.json().catch(() => ({}));
 
 			if (!res.ok) {
@@ -83,9 +77,8 @@ document.addEventListener("DOMContentLoaded", () => {
 				return;
 			}
 
-			// If you ever change controller to return 200 JSON success:
 			if (data.redirect) {
-				window.location.href = data.redirect;
+				window.location.href = data.redirect; // ✅ /products
 				return;
 			}
 

@@ -13,14 +13,26 @@ class Router
     public function dispatch(): void
     {
         $dispatcher = simpleDispatcher(function (RouteCollector $r) {
+            $r->addRoute('GET', '/', ['App\Controllers\AuthController', 'showLogin']);
+            $r->addRoute('POST', '/login', ['App\Controllers\AuthController', 'login']);
+
             //$r->addRoute('GET', '/', ['App\Controllers\UserController', 'showRegistrationForm']);
             $r->addRoute('GET', '/viewUsers', ['App\Controllers\UserController', 'viewUsers']);
             $r->addRoute('POST', '/registerUser', ['App\Controllers\UserController', 'registerUser']);
-            $r->addRoute('GET', '/', ['App\Controllers\AuthController', 'showLogin']);
-            $r->addRoute('POST', '/login', ['App\Controllers\AuthController', 'login']);
+
+
             $r->addRoute('POST', '/logout', ['App\Controllers\AuthController', 'logout']);
-            //$r->addRoute('GET', '/', ['App\Controllers\ProductController', 'addProductForm']);
+
+
+            /// Product routes
+            $r->addRoute('GET', '/productLists', ['App\Controllers\ProductController', 'productLists']);
+            $r->addRoute('GET', '/products', ['App\Controllers\ProductController', 'products']);
+            $r->addRoute('GET', '/products/{id}', ['App\Controllers\ProductController', 'productDetails']);
+            $r->addRoute('GET', '/api/products/{id}', ['App\Controllers\ProductController', 'viewProductDetail']);
+            $r->addRoute('GET', '/addProductForm', ['App\Controllers\ProductController', 'addProductForm']);
             $r->addRoute('POST', '/addProduct', ['App\Controllers\ProductController', 'addProduct']);
+            $r->addRoute('POST', '/toggleFavourite', ['App\Controllers\ProductController', 'toggleFavourite']);
+
         });
 
         $httpMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -55,7 +67,8 @@ class Router
 
                 // Build controller (inject dependencies when needed)
                 switch ($class) {
-                    case (\App\Controllers\UserController::class || \App\Controllers\AuthController::class):
+                    case \App\Controllers\UserController::class:
+                    case \App\Controllers\AuthController::class:
                         $userRepository = new \App\Repositories\UserRepository();
                         $userService = new \App\Services\UserService($userRepository);
                         $controller = new $class($userService);
@@ -78,7 +91,7 @@ class Router
                     return;
                 }
 
-                call_user_func_array([$controller, $method], $vars);
+                call_user_func_array([$controller, $method], array_values($vars));
                 return;
 
         }

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 class User {
-    private $id;
+    private $userId;
     private $firstName;
     private $lastName;
     private $email;
@@ -13,8 +13,8 @@ class User {
     private $createdAt;
     private $updatedAt;
 
-    public function __construct($id, $firstName, $lastName, $email, $password, $phone, $role, $createdAt, $updatedAt) {
-        $this->id = $id;
+    public function __construct($userId, $firstName, $lastName, $email, $password, $phone, $role, $createdAt, $updatedAt) {
+        $this->userId = $userId;
         $this->firstName = $firstName;
         $this->lastName = $lastName;
         $this->email = $email;
@@ -25,8 +25,8 @@ class User {
         $this->updatedAt = $updatedAt;
     }
 
-    public function getId() {
-        return $this->id;
+    public function getUserId() {
+        return $this->userId;
     }
 
     public function getFirstName() {

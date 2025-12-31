@@ -10,9 +10,6 @@
     <!-- CSRF exposed ONCE, globally -->
     <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
 
-    <link rel="stylesheet" href="/assets/css/app.css">
-    <link rel="stylesheet" href="/assets/css/addProduct.css">
-    <link rel="stylesheet" href="/assets/css/product.css">
     <link rel="stylesheet" href="/assets/css/afro-base.css">
     <link rel="stylesheet" href="/assets/css/login.css">
 

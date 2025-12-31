@@ -9,6 +9,7 @@
 	window.csrfFetch = function (url, options = {}) {
 		const token = getCsrfToken();
 
+        options.credentials = "same-origin";
 		options.headers ??= {};
 
 		// Only attach CSRF for state-changing requests

@@ -18,27 +18,53 @@ class UserRepository extends RepositoryBase implements IUserRepository
         return $users;
     }
 
-    public function findById($id): ?User
-    {
-        // Implementation here
-        $sql = "SELECT * FROM Users WHERE id = :id";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        $user = $stmt->fetchObject(User::class);
+public function findById($Id): ?User
+{
+    $sql = "SELECT * FROM Users WHERE userId = :userId LIMIT 1";
+    $stmt = $this->getConnection()->prepare($sql);
+    $stmt->execute([':userId' => $Id]);
 
-        return $user === false ? null : $user;
-    }
+    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+    if (!$row) return null;
+
+    return new User(
+        (int) $row['userId'],
+        (string) $row['firstName'],
+        (string) $row['lastName'],
+        (string) $row['email'],
+        (string) $row['password'],
+        (string) $row['phone'],
+        (string) $row['role'],
+        $row['createdAt'],
+        $row['updatedAt']
+    );
+}
+
 
     public function findByEmail(string $email): ?User
     {
-        $sql = "SELECT * FROM Users WHERE email = :email";
+        $sql = "SELECT * FROM Users WHERE email = :email LIMIT 1";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':email' => $email]);
 
-        $user = $stmt->fetchObject(User::class);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$row)
+            return null;
 
-        return $user === false ? null : $user;
+        return new User(
+            (int) $row['userId'],
+            (string) $row['firstName'],
+            (string) $row['lastName'],
+            (string) $row['email'],
+            (string) $row['password'],
+            (string) $row['phone'],
+            (string) $row['role'],
+            $row['createdAt'],
+            $row['updatedAt']
+        );
     }
+
+
 
 
     public function save(User $user): void
@@ -53,7 +79,7 @@ class UserRepository extends RepositoryBase implements IUserRepository
             ':phone' => $user->getPhone(),
             ':role' => $user->getRole(),
             ':email' => $user->getEmail(),
-            ':password' => password_hash($user->getPassword(), PASSWORD_DEFAULT)
+            ':password' => $user->getPassword()
         ]);
     }
 
@@ -68,7 +94,7 @@ class UserRepository extends RepositoryBase implements IUserRepository
             ':phone' => $user->getPhone(),
             ':role' => $user->getRole(),
             ':email' => $user->getEmail(),
-            ':id' => $user->getId()
+            ':id' => $user->getUserId()
         ]);
     }
 

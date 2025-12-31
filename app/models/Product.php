@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-class Product {
+class Product
+{
     private $productId;
-    private $name;
+    private $productName;
     private $description;
     private float $price;
     private $category;
@@ -14,9 +15,10 @@ class Product {
     private $updatedAt;
     private $isActive;
 
-    public function __construct($productId, $name, $description, $price, $category, $stock, $image, $createdAt, $updatedAt, $isActive) {
+    public function __construct($productId, $productName, $description, $price, $category, $stock, $image, $createdAt, $updatedAt, $isActive)
+    {
         $this->productId = $productId;
-        $this->name = $name;
+        $this->productName = $productName;
         $this->description = $description;
         $this->price = $price;
         $this->category = $category;
@@ -27,55 +29,57 @@ class Product {
         $this->isActive = true;
     }
 
-    public function getId() {
+    public function getId()
+    {
         return $this->productId;
     }
 
-    public function getName() {
-        return $this->name;
+    public function getName()
+    {
+        return $this->productName;
     }
 
-    public function getDescription() {
+    public function getDescription()
+    {
         return $this->description;
     }
 
-    public function getStock() {
+    public function getStock()
+    {
         return $this->stock;
     }
 
-    public function getPrice() {
+    public function getPrice()
+    {
         return $this->price;
     }
 
-    public function getCategory() {
+    public function getCategory()
+    {
         return $this->category;
     }
 
-    public function getImage() {
+    public function getImage()
+    {
         return $this->image;
     }
-    public function getCreatedAt() {
+
+    public function setImage($image)
+    {
+        $this->image = $image;
+    }
+    public function getCreatedAt()
+    {
         return $this->createdAt;
     }
-    public function getUpdatedAt() {
+    public function getUpdatedAt()
+    {
         return $this->updatedAt;
     }
-    public function isActive() {
+    public function isActive()
+    {
         return $this->isActive;
     }
-    public function __toString() {
-        return json_encode([
-            'productId' => $this->productId,
-            'name' => $this->name,
-            'description' => $this->description,
-            'price' => $this->price,
-            'category' => $this->category,
-            'stock' => $this->stock,
-            'image' => $this->image,
-            'createdAt' => $this->createdAt,
-            'updatedAt' => $this->updatedAt,
-            'isActive' => $this->isActive,
-        ]);
-    }
+
 
 }

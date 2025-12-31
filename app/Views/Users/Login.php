@@ -40,6 +40,7 @@
                 <div id="formSuccess" class="af-alert af-alert--success" role="status" aria-live="polite" hidden></div>
 
                 <form id="loginForm" class="af-form" action="/login" method="post" novalidate>
+                    <?= $this->csrfField(); ?>
                     <div class="af-grid">
 
                         <div class="af-field af-full">
