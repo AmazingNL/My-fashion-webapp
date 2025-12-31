@@ -20,25 +20,6 @@ class AppointmentSlot {
         return $this->slotId;
     }
 
-    public function getDate() {
-        return $this->date;
-    }
 
-    public function getTime() {
-        return $this->time;
-    }
-
-    public function getStatus() {
-        return $this->status;
-    }
-    public function getNote() {
-        return $this->note;
-    }
-    public function getCreatedAt() {
-        return $this->createdAt;
-    }
-    public function getUpdatedAt() {
-        return $this->updatedAt;
-    }
 
 }

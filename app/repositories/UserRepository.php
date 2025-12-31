@@ -1,76 +1,115 @@
 <?php
 
-namespace App\repositories;
+namespace App\Repositories;
 
-use App\models\User;
-use App\repositories\IUserRepository;
-use App\core\RepositoryBase;
+use App\Models\User;
+use App\Repositories\IUserRepository;
+use App\Core\RepositoryBase;
 
-class UserRepository extends RepositoryBase implements IUserRepository {
+class UserRepository extends RepositoryBase implements IUserRepository
+{
 
-    public function getAll(): array {
+    public function getAll(): array
+    {
         // Implementation here
-        $sql = "SELECT * FROM users";
+        $sql = "SELECT * FROM Users";
         $result = $this->getConnection()->query($sql);
         $users = $result->fetchAll(\PDO::FETCH_CLASS, User::class);
         return $users;
     }
 
-    public function findById($id): ?User {
-        // Implementation here
-        $sql = "SELECT * FROM users WHERE id = :id";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetchObject(User::class);
-    }
+public function findById($Id): ?User
+{
+    $sql = "SELECT * FROM Users WHERE userId = :userId LIMIT 1";
+    $stmt = $this->getConnection()->prepare($sql);
+    $stmt->execute([':userId' => $Id]);
 
-    public function findByEmail($email): ?User {
-        // Implementation here
-        $sql = "SELECT * FROM users WHERE email = :email";
+    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+    if (!$row) return null;
+
+    return new User(
+        (int) $row['userId'],
+        (string) $row['firstName'],
+        (string) $row['lastName'],
+        (string) $row['email'],
+        (string) $row['password'],
+        (string) $row['phone'],
+        (string) $row['role'],
+        $row['createdAt'],
+        $row['updatedAt']
+    );
+}
+
+
+    public function findByEmail(string $email): ?User
+    {
+        $sql = "SELECT * FROM Users WHERE email = :email LIMIT 1";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':email' => $email]);
-        return $stmt->fetchObject(User::class);
+
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$row)
+            return null;
+
+        return new User(
+            (int) $row['userId'],
+            (string) $row['firstName'],
+            (string) $row['lastName'],
+            (string) $row['email'],
+            (string) $row['password'],
+            (string) $row['phone'],
+            (string) $row['role'],
+            $row['createdAt'],
+            $row['updatedAt']
+        );
     }
 
-    public function save(User $user): void {
+
+
+
+    public function save(User $user): void
+    {
         // Implementation here
-        $sql = "INSERT INTO users (firstName, lastName, phone, role, createdAt, updatedAt, email, password) 
+        $sql = "INSERT INTO Users (firstName, lastName, phone, role, createdAt, updatedAt, email, password) 
         VALUES (:firstName, :lastName, :phone, :role, NOW(), NOW(), :email, :password)";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':firstName' => $user->getFirstName(),
             ':lastName' => $user->getLastName(),
             ':phone' => $user->getPhone(),
-            ':role' => $user->getRole(),    
+            ':role' => $user->getRole(),
             ':email' => $user->getEmail(),
-            ':password' => password_hash($user->getPassword(), PASSWORD_DEFAULT)
+            ':password' => $user->getPassword()
         ]);
     }
 
-    public function update(User $user): void {
+    public function update(User $user): void
+    {
         // Implementation here
-        $sql = "UPDATE users SET firstName = :firstName, lastName = :lastName, phone = :phone, role = :role, updatedAt = NOW(), email = :email WHERE id = :id";
-        $stmt = $this->getConnection()->prepare($sql);  
+        $sql = "UPDATE Users SET firstName = :firstName, lastName = :lastName, phone = :phone, role = :role, updatedAt = NOW(), email = :email WHERE id = :id";
+        $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':firstName' => $user->getFirstName(),
             ':lastName' => $user->getLastName(),
             ':phone' => $user->getPhone(),
             ':role' => $user->getRole(),
             ':email' => $user->getEmail(),
-            ':id' => $user->getId()
+            ':id' => $user->getUserId()
         ]);
     }
 
-    public function delete($id): void {
+    public function delete($id): void
+    {
         // Implementation here
-        $sql = "DELETE FROM users WHERE id = :id";
+        $sql = "DELETE FROM Users WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':id' => $id]);
     }
 
-    public function changePassword($id, $newPassword): void {
+    public function changePassword($id, $newPassword): void
+    {
         // Implementation here
-        $sql = "UPDATE users SET password = :password, updatedAt = NOW() WHERE id = :id";
+        $sql = "UPDATE Users SET password = :password, updatedAt = NOW() WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':password' => password_hash($newPassword, PASSWORD_DEFAULT),
@@ -78,9 +117,10 @@ class UserRepository extends RepositoryBase implements IUserRepository {
         ]);
     }
 
-    public function changeEmail($id, $newEmail): void {
+    public function changeEmail($id, $newEmail): void
+    {
         // Implementation here
-        $sql = "UPDATE users SET email = :email, updatedAt = NOW() WHERE id = :id";
+        $sql = "UPDATE Users SET email = :email, updatedAt = NOW() WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':email' => $newEmail,

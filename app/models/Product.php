@@ -1,51 +1,85 @@
 <?php
 
-namespace app\models;
+namespace App\Models;
 
-class Product {
+class Product
+{
     private $productId;
-    private $name;
+    private $productName;
     private $description;
-    private $price;
+    private float $price;
     private $category;
+    private $stock;
     private $image;
     private $createdAt;
     private $updatedAt;
     private $isActive;
 
-    public function __construct($productId, $name, $description, $price, $category, $image) {
+    public function __construct($productId, $productName, $description, $price, $category, $stock, $image, $createdAt, $updatedAt, $isActive)
+    {
         $this->productId = $productId;
-        $this->name = $name;
+        $this->productName = $productName;
         $this->description = $description;
         $this->price = $price;
         $this->category = $category;
+        $this->stock = $stock;
         $this->image = $image;
         $this->createdAt = null;
         $this->updatedAt = null;
         $this->isActive = true;
     }
 
-    public function getId() {
-        return $this->id;
+    public function getId()
+    {
+        return $this->productId;
     }
 
-    public function getName() {
-        return $this->name;
+    public function getName()
+    {
+        return $this->productName;
     }
 
-    public function getDescription() {
+    public function getDescription()
+    {
         return $this->description;
     }
 
-    public function getPrice() {
+    public function getStock()
+    {
+        return $this->stock;
+    }
+
+    public function getPrice()
+    {
         return $this->price;
     }
 
-    public function getCategory() {
+    public function getCategory()
+    {
         return $this->category;
     }
 
-    public function getImage() {
+    public function getImage()
+    {
         return $this->image;
     }
+
+    public function setImage($image)
+    {
+        $this->image = $image;
+    }
+    public function getCreatedAt()
+    {
+        return $this->createdAt;
+    }
+    public function getUpdatedAt()
+    {
+        return $this->updatedAt;
+    }
+    public function isActive()
+    {
+        return $this->isActive;
+    }
+
+
 }

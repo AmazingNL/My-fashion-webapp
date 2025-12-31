@@ -1,41 +1,83 @@
 <?php
 
-namespace app\models;
+namespace App\Models;
 
-use app\models\Product;
+class ProductVariant
+{
+    private ?int $variantId;
+    private int $productId;
+    private string $size;
+    private string $colour;
+    private int $stockQuantity;
 
-class ProductVariant {
-    private $variantId;
-    private $product;
-    private $size;
-    private $color;
-    private $stock;
-
-    public function __construct($variantId, Product $product, $size, $color, $stock) {
+    public function __construct(
+        ?int $variantId,
+        int $productId,
+        string $size,
+        string $colour,
+        int $stockQuantity
+    ) {
         $this->variantId = $variantId;
-        $this->product = $product; 
+        $this->productId = $productId;
         $this->size = $size;
-        $this->color = $color;
-        $this->stock = $stock;
+        $this->colour = $colour;
+        $this->stockQuantity = $stockQuantity;
     }
 
-    public function getVariantId() {
+    // Getters
+    public function getVariantId(): ?int
+    {
         return $this->variantId;
     }
 
-    public function getProduct() {
-        return $this->product;
+    public function getProductId(): int
+    {
+        return $this->productId;
     }
 
-    public function getSize() {
+    public function getSize(): string
+    {
         return $this->size;
     }
 
-    public function getColor() {
-        return $this->color;
+    public function getColour(): string
+    {
+        return $this->colour;
     }
 
-    public function getStock() {
-        return $this->stock;
+    public function getColor(): string
+    {
+        return $this->colour;
+    }
+
+    public function getStock(): int
+    {
+        return $this->stockQuantity;
+    }
+
+    // Setters
+    public function setSize(string $size): void
+    {
+        $this->size = $size;
+    }
+
+    public function setColour(string $colour): void
+    {
+        $this->colour = $colour;
+    }
+
+    public function setColor(string $color): void
+    {
+        $this->colour = $color;
+    }
+
+    public function setStock(int $stockQuantity): void
+    {
+        $this->stockQuantity = $stockQuantity;
+    }
+
+    public function setStockQuantity(int $stockQuantity): void
+    {
+        $this->stockQuantity = $stockQuantity;
     }
 }

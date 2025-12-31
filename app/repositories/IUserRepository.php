@@ -1,14 +1,14 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\User;
+use App\Models\User;
 
 interface IUserRepository {
 
     public function getAll(): array;
     public function findById($id): ?User;
-    public function findByEmail($email): ?User;
+    public function findByEmail(string $email): ?User;
     public function save(User $user): void;
     public function update(User $user): void;
     public function delete($id): void;

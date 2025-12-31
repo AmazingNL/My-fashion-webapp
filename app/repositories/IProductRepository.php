@@ -1,17 +1,24 @@
 <?php
 
-namespace app\repositories;
-use app\models\Product;
+namespace App\Repositories;
+use App\Models\Product;
+use App\Models\ProductVariant;
 
 interface IProductRepository {
 
-    public function getAll(): array;
-    public function findById($id): ?Product;
-    public function findByName($name): ?Product;
-    public function findByCategory($category): array;
-    public function save(Product $product): void;
+    public function getAllActive(): array;
+    public function findSimilarProducts(int $excludeProductId, string $category, int $limit = 4): array;
+    public function getProductById(int $id): ?Product;
+    public function getVariantsByProductId(int $id): array;
+    public function getVariantById(int $id): ?ProductVariant;
+    public function save(Product $product): int;
+    public function saveVariant(ProductVariant $variant): void;
     public function update(Product $product): void;
     public function delete($id): void;
+
+    public function beginTransaction(): void;
+    public function commit(): void;
+    public function rollBack(): void;
 
     // Define methods for product repository
 }

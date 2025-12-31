@@ -1,8 +1,8 @@
 <?php
 
-namespace app\repositories;
+namespace App\Repositories;
 
-use app\models\Appointment;
+use App\Models\Appointment;
 
 interface IAppointmentRepository {
 
