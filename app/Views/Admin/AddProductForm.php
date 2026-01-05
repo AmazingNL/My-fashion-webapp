@@ -16,6 +16,7 @@
             <div id="formSuccess" class="notice notice--success" hidden></div>
 
             <form method="post" action="/addProduct" class="form" id="addProductForm" enctype="multipart/form-data">
+                <?= $this->csrfField(); ?>
                 <div class="grid">
                     <!-- Left: Product Details -->
                     <section class="card">

@@ -1,21 +1,35 @@
-/**
- * public/assets/css/login.css
- *
- * @format
- */
+/** @format */
+/* ============================================
+   LOGIN PAGE - AFRO THEME
+   Imports unified styles from main.css
+   ============================================ */
+
+/* Import main Afro theme */
+@import url("/assets/css/main.css");
+
+/* ============================================
+   LOGIN-SPECIFIC STYLES
+   ============================================ */
 
 .login-layout {
 	display: grid;
 	grid-template-columns: 1.1fr 1fr;
 	gap: clamp(16px, 3vw, 26px);
+	max-width: 1040px;
+	margin: 0 auto;
+	padding: clamp(18px, 4vw, 44px);
 }
 
 .login-brand {
 	background: linear-gradient(
 		135deg,
-		rgba(255, 255, 255, 0.08),
-		rgba(255, 255, 255, 0.03)
+		rgba(212, 115, 94, 0.08),
+		rgba(244, 185, 66, 0.05)
 	);
+	border-radius: var(--radius-lg);
+	padding: clamp(18px, 3vw, 28px);
+	border: 2px solid var(--border-light);
+	box-shadow: var(--shadow);
 }
 
 .login-tiles {
@@ -26,11 +40,18 @@
 }
 
 .login-tile {
-	padding: 12px 12px;
-	border-radius: 16px;
-	background: rgba(0, 0, 0, 0.22);
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	color: rgba(246, 241, 255, 0.88);
+	padding: 12px;
+	border-radius: var(--radius-md);
+	background: rgba(212, 115, 94, 0.05);
+	border: 1px solid var(--border-light);
+	color: var(--text-secondary);
+	transition: all 0.3s ease;
+}
+
+.login-tile:hover {
+	background: rgba(212, 115, 94, 0.1);
+	border-color: var(--afro-terracotta);
+	transform: translateX(4px);
 }
 
 @media (max-width: 900px) {

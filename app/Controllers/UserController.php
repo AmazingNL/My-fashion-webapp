@@ -5,14 +5,18 @@ namespace App\Controllers;
 use App\models\User;
 use App\services\UserService;
 use App\Core\ControllerBase;
+use App\services\ActivityLogService;
 
-class UserController extends ControllerBase
+class UserController extends ControllerBase 
 {
     private UserService $userService;
 
-    public function __construct(UserService $userService)
+    private ActivityLogService $activityLogService;
+
+    public function __construct(UserService $userService, ActivityLogService $activityLogService)
     {
         $this->userService = $userService;
+        $this->activityLogService = $activityLogService;
     }
 
     public function showRegistrationForm(): void
@@ -54,6 +58,14 @@ class UserController extends ControllerBase
                 ['message' => 'User registered successfully.'],
                 201
             );
+            $this->activityLogService->log(
+            $user->getUserId(),
+                'Registered new user: ' . $user->getEmail(),
+                'user_registration',
+                null,
+                'A new user has been registered.'
+            );
+            $this->redirect('/');
         } catch (\Throwable $e) {
             // Safety net (DB down, unexpected error, etc.)
             $this->jsonResponse(
