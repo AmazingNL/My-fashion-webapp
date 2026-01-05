@@ -13,7 +13,9 @@ class AuthController extends ControllerBase {
     }
 
     public function showLogin() {
-        $this->render('Users/Login', ['title' => 'Login']);
+        $this->render('Auth/Login',
+        ['title' => 'Login'],
+        'auth');
     }
 
 public function login(): void
@@ -36,10 +38,11 @@ public function login(): void
             return;
         }
 
-        $_SESSION['user_id'] = $user->getUserId(); // or getUserId()
+        $_SESSION['userId'] = $user->getUserId();
+        $_SESSION['role'] = $user->getRole();
+
         $this->jsonResponse(['ok' => true, 'redirect' => '/products'], 200);
     } catch (\Throwable $e) {
-        error_log($e);
         $this->jsonResponse(
             ['error' => 'An unexpected error occurred. Please try again later.'. $e->getMessage()],
             500

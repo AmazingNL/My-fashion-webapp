@@ -53,9 +53,13 @@ class ProductService implements IProductService
             $colors = [];
 
             foreach ($variants as $variant) {
-                // FIXED: Variants are now ProductVariant objects, not arrays
-                $sizes[$variant->getSize()] = true;
-                $colors[$variant->getColour()] = true;  // or use getColor() - both work
+                $size = is_object($variant) ? $variant->getSize() : ($variant['size'] ?? '');
+                $colour = is_object($variant) ? $variant->getColour() : ($variant['colour'] ?? ($variant['color'] ?? ''));
+
+                if ($size !== '')
+                    $sizes[$size] = true;
+                if ($colour !== '')
+                    $colors[$colour] = true;
             }
 
             return [
@@ -67,9 +71,6 @@ class ProductService implements IProductService
             ];
 
         } catch (\Throwable $e) {
-            error_log("Exception in getProductDetails: " . $e->getMessage());
-            error_log("Stack trace: " . $e->getTraceAsString());
-
             return [
                 'product' => null,
                 'variants' => [],
@@ -131,6 +132,7 @@ class ProductService implements IProductService
 
         if (isset($basket[$variantId])) {
             $basket[$variantId] += $quantity;
+            
         } else {
             $basket[$variantId] = $quantity;
         }

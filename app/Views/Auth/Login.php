@@ -1,16 +1,7 @@
 <?php
 // views/users/login.php
 ?>
-<!doctype html>
-<html lang="en">
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Login</title>
-
-
-</head>
 
 <body>
     <main class="af-shell">
@@ -71,7 +62,7 @@
                     </button>
 
                     <p class="af-mini">
-                        New here? <a class="af-link" href="/register">Create account</a>
+                        New here? <a class="af-link" href="/showRegistrationForm">Create account</a>
                     </p>
 
                     <p class="af-mini">

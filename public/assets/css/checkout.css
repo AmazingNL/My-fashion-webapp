@@ -1,0 +1,102 @@
+@import url("/assets/css/main.css"); /* uses your shared design system :contentReference[oaicite:5]{index=5} */
+
+.checkout {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 2rem;
+}
+
+.checkout__head {
+	margin-bottom: 1.25rem;
+}
+
+.checkout__sub {
+	color: var(--text-secondary);
+	margin-top: 0.35rem;
+}
+
+.checkout__layout {
+	display: grid;
+	grid-template-columns: 1.2fr 0.8fr;
+	gap: 1.5rem;
+	align-items: start;
+}
+
+.checkout__formCard {
+	padding: 1.75rem;
+}
+
+.checkout__form {
+	display: grid;
+	gap: 1rem;
+}
+
+.checkout__btn {
+	margin-top: 0.25rem;
+}
+
+.checkout__hint {
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	margin-top: 0.25rem;
+}
+
+.checkout__summary {
+	padding: 1.75rem;
+	position: sticky;
+	top: 6.5rem;
+}
+
+.checkout__summaryTitle {
+	margin-bottom: 1rem;
+}
+
+.checkout__summaryList {
+	display: grid;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.checkout__row {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.75rem;
+	border: 1px solid var(--border-light);
+	border-radius: var(--radius-sm);
+	background: rgba(248, 243, 232, 0.35);
+}
+
+.checkout__rowName {
+	font-weight: 700;
+}
+
+.checkout__rowMeta {
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	margin-top: 0.2rem;
+}
+
+.checkout__rowPrice {
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.checkout__totalRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-top: 1px solid var(--border-light);
+	padding-top: 1rem;
+	margin-top: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+	.checkout__layout {
+		grid-template-columns: 1fr;
+	}
+	.checkout__summary {
+		position: static;
+	}
+}

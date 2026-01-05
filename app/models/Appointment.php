@@ -2,62 +2,25 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\AppointmentStatus;
+final class Appointment
+{
+    public function __construct(
+        private ?int $appointmentId,
+        private int $userId,
+        private int $slotId,
+        private ?string $designType,
+        private ?string $notes,
+        private AppointmentStatus $status,
+        private ?string $createdAt,
+        private ?string $updatedAt
+    ) {}
 
-class Appointment {
-    private $appointmentId;
-    private $customerId;
-    private $date;
-    private AppointmentStatus $status;
-    private $note;
-    private $createdAt;
-    private $updatedAt;
-
-    public function __construct($appointmentId, User $customerId, $date, AppointmentStatus $status, $note, $createdAt, $updatedAt) {
-        $this->appointmentId = $appointmentId;
-        $this->customerId = $customerId->getId();
-        $this->date = $date;
-        $this->status = $status;
-        $this->note = $note;
-        $this->createdAt = $createdAt;
-        $this->updatedAt = $updatedAt;
-    }
-
-    public function getAppointmentId() {
-        return $this->appointmentId;
-    }
-
-    public function getCustomerId() {
-        return $this->customerId;
-    }
-
-    public function getDate() {
-        return $this->date;
-    }
-
-    public function getStatus(): AppointmentStatus {
-        return $this->status;
-    }
-
-    // Helper to convert stored string (e.g. from DB) to the enum
-    public static function statusFromName(string $name): AppointmentStatus {
-        $name = strtoupper($name);
-        foreach (AppointmentStatus::cases() as $case) {
-            if ($case->name === $name) {
-                return $case;
-            }
-        }
-        return AppointmentStatus::REQUEST;
-    }
-    public function getNote() {
-        return $this->note;
-    }
-    public function getCreatedAt() {
-        return $this->createdAt;
-    }
-    public function getUpdatedAt() {
-        return $this->updatedAt;
-    }
-
+    public function getAppointmentId(): ?int { return $this->appointmentId; }
+    public function getUserId(): int { return $this->userId; }
+    public function getSlotId(): int { return $this->slotId; }
+    public function getDesignType(): ?string { return $this->designType; }
+    public function getNotes(): ?string { return $this->notes; }
+    public function getStatus(): AppointmentStatus { return $this->status; }
+    public function getCreatedAt(): ?string { return $this->createdAt; }
+    public function getUpdatedAt(): ?string { return $this->updatedAt; }
 }

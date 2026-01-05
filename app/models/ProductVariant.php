@@ -50,7 +50,7 @@ class ProductVariant
         return $this->colour;
     }
 
-    public function getStock(): int
+    public function getStockQuantity(): int
     {
         return $this->stockQuantity;
     }
@@ -71,13 +71,9 @@ class ProductVariant
         $this->colour = $color;
     }
 
-    public function setStock(int $stockQuantity): void
-    {
-        $this->stockQuantity = $stockQuantity;
-    }
-
     public function setStockQuantity(int $stockQuantity): void
     {
         $this->stockQuantity = $stockQuantity;
     }
+
 }

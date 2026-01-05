@@ -11,8 +11,7 @@ class UserRepository extends RepositoryBase implements IUserRepository
 
     public function getAll(): array
     {
-        // Implementation here
-        $sql = "SELECT * FROM Users";
+        $sql = "SELECT * FROM users";
         $result = $this->getConnection()->query($sql);
         $users = $result->fetchAll(\PDO::FETCH_CLASS, User::class);
         return $users;
@@ -20,7 +19,7 @@ class UserRepository extends RepositoryBase implements IUserRepository
 
 public function findById($Id): ?User
 {
-    $sql = "SELECT * FROM Users WHERE userId = :userId LIMIT 1";
+    $sql = "SELECT * FROM users WHERE userId = :userId LIMIT 1";
     $stmt = $this->getConnection()->prepare($sql);
     $stmt->execute([':userId' => $Id]);
 
@@ -43,7 +42,7 @@ public function findById($Id): ?User
 
     public function findByEmail(string $email): ?User
     {
-        $sql = "SELECT * FROM Users WHERE email = :email LIMIT 1";
+        $sql = "SELECT * FROM users WHERE email = :email LIMIT 1";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':email' => $email]);
 
@@ -70,7 +69,7 @@ public function findById($Id): ?User
     public function save(User $user): void
     {
         // Implementation here
-        $sql = "INSERT INTO Users (firstName, lastName, phone, role, createdAt, updatedAt, email, password) 
+        $sql = "INSERT INTO users (firstName, lastName, phone, role, createdAt, updatedAt, email, password) 
         VALUES (:firstName, :lastName, :phone, :role, NOW(), NOW(), :email, :password)";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
@@ -86,7 +85,7 @@ public function findById($Id): ?User
     public function update(User $user): void
     {
         // Implementation here
-        $sql = "UPDATE Users SET firstName = :firstName, lastName = :lastName, phone = :phone, role = :role, updatedAt = NOW(), email = :email WHERE id = :id";
+        $sql = "UPDATE users SET firstName = :firstName, lastName = :lastName, phone = :phone, role = :role, updatedAt = NOW(), email = :email WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':firstName' => $user->getFirstName(),
@@ -101,7 +100,7 @@ public function findById($Id): ?User
     public function delete($id): void
     {
         // Implementation here
-        $sql = "DELETE FROM Users WHERE id = :id";
+        $sql = "DELETE FROM users WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':id' => $id]);
     }
@@ -109,7 +108,7 @@ public function findById($Id): ?User
     public function changePassword($id, $newPassword): void
     {
         // Implementation here
-        $sql = "UPDATE Users SET password = :password, updatedAt = NOW() WHERE id = :id";
+        $sql = "UPDATE users SET password = :password, updatedAt = NOW() WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':password' => password_hash($newPassword, PASSWORD_DEFAULT),
@@ -120,7 +119,7 @@ public function findById($Id): ?User
     public function changeEmail($id, $newEmail): void
     {
         // Implementation here
-        $sql = "UPDATE Users SET email = :email, updatedAt = NOW() WHERE id = :id";
+        $sql = "UPDATE users SET email = :email, updatedAt = NOW() WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':email' => $newEmail,

@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Services\IUserService;
 use App\Repositories\IUserRepository;
 use App\Core\RepositoryBase;
-use App\Core\ControllerBase;
 use DateTime;
 
 class UserService extends RepositoryBase implements IUserService

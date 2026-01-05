@@ -19,9 +19,6 @@
                         autocomplete="off"
                         aria-label="Search products"
                     />
-                    <a class="btn btn--ghost" href="/cart">
-                        Basket <span id="cartCount" class="dot">0</span>
-                    </a>
                 </div>
             </header>
 

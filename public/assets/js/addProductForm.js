@@ -60,64 +60,89 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
-	// Form submission (simplified for demo)
-	// Form submission (simplified for demo)
+	// Form submission
 	form?.addEventListener("submit", async (e) => {
 		e.preventDefault();
 
-		if (errBox) errBox.hidden = true;
-		if (okBox) okBox.hidden = true;
+		console.log("SUBMIT START");
 
-		let res;
+		if (errBox) {
+			errBox.hidden = true;
+			errBox.textContent = "";
+		}
+		if (okBox) {
+			okBox.hidden = true;
+			okBox.textContent = "";
+		}
+
+		let success = false; 
+
 		try {
-			res = await csrfFetch("/addProduct", {
-				// Don't use csrfFetch with FormData containing files
+			const res = await fetch("/addProduct", {
 				method: "POST",
-				body: new FormData(form), // This will include the file
+				body: new FormData(form),
 				headers: { Accept: "application/json" },
 				credentials: "same-origin",
 			});
 
-			// CHECK IF RESPONSE IS OK - THIS IS THE KEY PART
+			const raw = await res.text();
+			console.log("STATUS:", res.status);
+			console.log("RAW:", raw);
+
+			let data = {};
+			data = raw ? JSON.parse(raw) : {};
+
 			if (!res.ok) {
-				const errorData = await res.json();
+				const errs = Array.isArray(data.errors)
+					? data.errors
+					: ["An error occurred."];
 				if (errBox) {
-					// Display errors from your PHP response
-					if (errorData.errors && Array.isArray(errorData.errors)) {
-						errBox.textContent = errorData.errors.join(", ");
-					} else {
-						errBox.textContent = "An error occurred. Please try again.";
-					}
+					errBox.textContent = errs.join(", ");
 					errBox.hidden = false;
+					errBox.style.display = "block";
 				}
 				return;
 			}
 
-			// Success case
-			const data = await res.json();
-			if (okBox && data.message) {
-				okBox.textContent = data.message.join(", ");
+			const msg = Array.isArray(data.message)
+				? data.message.join(", ")
+				: typeof data.message === "string"
+				? data.message
+				: "Saved successfully";
+
+			console.log("SHOW SUCCESS:", msg);
+
+			if (okBox) {
+				okBox.textContent = msg;
 				okBox.hidden = false;
+				okBox.style.display = "block";
+				window.scrollTo({ top: 0, behavior: "smooth" });
 			}
-		} catch {
-			// Only network errors end up here
+
+			success = true; // mark success
+		} catch (err) {
+			console.error("SUBMIT CRASH:", err);
 			if (errBox) {
-				errBox.textContent = "Network error. Please try again.";
+				errBox.textContent = err?.message || "Unexpected error.";
 				errBox.hidden = false;
+				errBox.style.display = "block";
 			}
 			return;
 		}
 
-		// Reset after success
+		if (!success) return;
+
+		// Reset after SUCCESS only
 		setTimeout(() => {
 			form.reset();
-			if (variantsWrap) variantsWrap.innerHTML = "";
+			variantsWrap && (variantsWrap.innerHTML = "");
 			addVariantRow();
-			if (previewImg) previewImg.hidden = true;
-			if (previewPh) previewPh.hidden = false;
-			if (previewText)
-				previewText.textContent = "Paste an image URL to preview";
-			if (okBox) okBox.hidden = true;
-		}, 2000);
+			previewImg && (previewImg.hidden = true);
+			previewPh && (previewPh.hidden = false);
+			previewText && (previewText.textContent = "Choose an image to preview");
+			// keep success visible a bit or hide it if you want:
+			// okBox && (okBox.hidden = true);
+			errBox && (errBox.hidden = true);
+		}, 3000);
 	});
 });

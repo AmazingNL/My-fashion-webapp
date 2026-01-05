@@ -3,16 +3,23 @@
 namespace App\Repositories;
 
 use App\Models\AppointmentSlot;
-use App\Models\Appointment;
 
-interface IAppointmentSlotRepository {
-
+interface IAppointmentSlotRepository
+{
     public function getAll(): array;
-    public function findById($id): ?AppointmentSlot;
-    public function findByAppointmentId($appointmentId): array;
-    public function save(AppointmentSlot $appointmentSlot): void;
-    public function update(AppointmentSlot $appointmentSlot): void;
-    public function delete($id): void;
+    public function findById(int $slotId): ?AppointmentSlot;
 
-    // Define methods for appointment slot repository
+    public function findByDate(string $date): array;
+    public function findAvailableByDate(string $date): array;
+
+    public function create(AppointmentSlot $slot): int;
+    public function setAvailability(int $slotId, bool $available): void;
+
+    public function lockAvailableSlotForUpdate(int $slotId): ?array; // row array
+
+
+
+    public function beginTransaction(): void;
+    public function commit(): void;
+    public function rollBack(): void;
 }

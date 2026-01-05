@@ -13,7 +13,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
     /** @return Product[] */
     public function getAllActive(): array
     {
-        $sql = "SELECT * FROM Products WHERE isActive = 1 ORDER BY createdAt DESC";
+        $sql = "SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute();
 
@@ -23,7 +23,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
 
     public function findSimilarProducts(int $excludeProductId, string $category, int $limit = 4): array
     {
-        $sql = "SELECT * FROM Products 
+        $sql = "SELECT * FROM products 
             WHERE category = :category 
             AND productId != :excludeId
             AND isActive = 1
@@ -45,7 +45,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
     /** @return ProductVariant[] */
     public function getVariantsByProductId(int $productId): array
     {
-        $sql = "SELECT * FROM ProductVariants WHERE productId = :pid ORDER BY size, colour";
+        $sql = "SELECT * FROM product_variants WHERE productId = :pid ORDER BY size, colour";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':pid' => $productId]);
 
@@ -56,7 +56,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
 
     public function getVariantById(int $variantId): ?ProductVariant
     {
-        $sql = "SELECT * FROM ProductVariants WHERE variantId = :variantId";
+        $sql = "SELECT * FROM product_variants WHERE variantId = :variantId";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':variantId' => $variantId]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -69,7 +69,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
 
     public function getProductById(int $id): ?Product
     {
-        $sql = "SELECT * FROM Products 
+        $sql = "SELECT * FROM products 
             WHERE productId = :id 
             AND isActive = 1";
 
@@ -87,7 +87,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
 
     public function save(Product $product): int
     {
-        $sql = "INSERT INTO Products
+        $sql = "INSERT INTO products
                 (productName, description, price, category, stock, image, createdAt, updatedAt, isActive)
                 VALUES (:productName, :description, :price, :category, :stock, :image, NOW(), NOW(), :isActive)";
 
@@ -108,7 +108,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
 
     public function saveVariant(ProductVariant $variant): void
     {
-        $sql = "INSERT INTO ProductVariants
+        $sql = "INSERT INTO product_variants
                 (productId, size, colour, stockQuantity)
                 VALUES (:productId, :size, :colour, :stockQuantity)";
 
@@ -117,14 +117,14 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             ':productId' => $variant->getProductId(),
             ':size' => $variant->getSize(),
             ':colour' => $variant->getColour(),
-            ':stockQuantity' => $variant->getStock()
+            ':stockQuantity' => $variant->getStockQuantity()
         ]);
     }
 
     public function update(Product $product): void
     {
         // Implementation for updating an existing product
-        $sql = "UPDATE Products SET productName = :productName, description = :description, price = :price, category = :category,
+        $sql = "UPDATE products SET productName = :productName, description = :description, price = :price, category = :category,
         stock = :stock, image = :image, updatedAt = NOW(), isActive = :isActive WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
@@ -144,7 +144,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
     public function delete($id): void
     {
         // Implementation for deleting a product by ID
-        $sql = "DELETE FROM Products WHERE id = :id";
+        $sql = "DELETE FROM products WHERE id = :id";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':id' => $id]);
     }

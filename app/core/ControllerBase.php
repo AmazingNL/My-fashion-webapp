@@ -6,36 +6,45 @@ abstract class ControllerBase
 {
     // Base controller code here
 
-protected function render(string $view, $data = []): void
-{
-    $data['csrf'] ??= $this->csrfToken();
+    protected function render(string $view, $data = [], $layout = 'main'): void
+    {
+        $data['csrf'] ??= $this->csrfToken();
 
-    extract($data, EXTR_SKIP);
+        extract($data, EXTR_SKIP);
 
-    $content = __DIR__ . '/../Views/' . $view . '.php';
-    $layout  = __DIR__ . '/../Views/Layouts/main.php';
+        $content = __DIR__ . '/../Views/' . $view . '.php';
+        $layout = __DIR__ . '/../Views/Layouts/'.$layout .'.php';
 
-    if (!file_exists($content)) {
-        throw new \Exception("view file not found: " . $view);
+        if (!file_exists($content)) {
+            throw new \Exception("view file not found: " . $view);
+        }
+
+        require $layout;
     }
 
-    require $layout;
-}
 
-
-    protected function redirect(string $url)
+    protected function redirect(string $url): void
     {
-        header("Location: " . $url);
-        exit();
+        if (headers_sent($file, $line)) {
+            error_log("Redirect blocked: headers already sent in $file:$line");
+            return; // or throw
+        }
+        header("Location: $url");
+        exit;
     }
 
-    protected function jsonResponse($data, int $statusCode = 200, array $headers = [])
+    protected function jsonResponse($data, int $statusCode = 200): void
     {
+        if (headers_sent($file, $line)) {
+            error_log("JSON blocked: headers already sent in $file:$line");
+            // still echo JSON without headers, or just exit
+        }
         http_response_code($statusCode);
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode($data, JSON_THROW_ON_ERROR);
-        exit();
+        exit;
     }
+
 
     protected function isPostRequest(): bool
     {
@@ -85,6 +94,12 @@ protected function render(string $view, $data = []): void
     {
         $token = htmlspecialchars($this->csrfToken(), ENT_QUOTES, 'UTF-8');
         return '<input type="hidden" name="csrf" value="' . $token . '">';
+    }
+
+    protected function currentUserId(): ?int
+    {
+        $this->ensureSession();
+        return isset($_SESSION['userId']) ? (int) $_SESSION['userId'] : null;
     }
 
 
