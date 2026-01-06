@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\ControllerBase;
-use App\Models\Product;
 use App\Core\Middleware;
 use App\Services\ProductService;
+use App\Models\Product;
 use App\Services\UserService;
 use App\Services\ActivityLogService;
 
@@ -36,11 +36,11 @@ class AdminController extends ControllerBase
 
         // Get statistics
         $stats = [
-            'totalProducts' => $this->productService->getTotalProductsCount(),
-            'totalUsers' => $this->userService->getTotalUsersCount(),
+            'totalProducts' => $this->productService->getActiveProducts(),
+            'totalUsers' => $this->userService->getAllUsers(),
             'totalOrders' => $this->getOrdersCount(),
             'pendingAppointments' => $this->getPendingAppointmentsCount(),
-            'recentActivities' => $this->logService->getAllLogs(10),
+            'recentActivities' => $this->logService->getLogs(10),
         ];
 
         $this->logService->log(
@@ -54,7 +54,7 @@ class AdminController extends ControllerBase
         $this->render('Admin/Dashboard', [
             'title' => 'Admin Dashboard',
             'stats' => $stats
-        ]);
+        ], 'admin');
     }
 
     /**
@@ -64,7 +64,7 @@ class AdminController extends ControllerBase
     {
         Middleware::requireAdmin();
 
-        $products = $this->productService->getAllProducts();
+        $products = $this->productService->getActiveProducts();
 
         $this->logService->log(
             $this->currentUserId(),
@@ -162,7 +162,7 @@ class AdminController extends ControllerBase
         $limit = 50;
         $offset = ($page - 1) * $limit;
 
-        $logs = $this->logService->getAllLogs($limit, $offset);
+        $logs = $this->logService->getLogs($limit, $offset);
 
         $this->logService->log(
             $this->currentUserId(),
@@ -248,23 +248,30 @@ class AdminController extends ControllerBase
 
         $result = $this->productService->deleteProduct($productId);
 
-        if ($result) {
+        if (isset($result['success'])) {
             $this->logService->log(
                 $this->currentUserId(),
                 'Deleted Product',
                 'product',
                 $productId,
-                'Product permanently deleted'
+                'Product deleted'
             );
 
-            $this->jsonResponse(['success' => true, 'message' => 'Product deleted']);
-        } else {
-            $this->jsonResponse(['success' => false, 'message' => 'Failed to delete product'], 400);
+            $this->jsonResponse(['success' => true, 'message' => $result['success']]);
+            return;
         }
+
+        $this->jsonResponse([
+            'success' => false,
+            'message' => $result['error'] ?? 'Failed to delete product'
+        ], 400);
     }
+
 
     public function addProductForm(): void
     {
+        Middleware::requireAdmin();
+
         // Render the add product form (implementation depends on your templating system)
         $this->render('Admin/AddProductForm', ['title' => 'Add Product',]);
     }
@@ -353,9 +360,265 @@ class AdminController extends ControllerBase
         return ['/images/products/' . $name, null];
     }
 
+    /**
+ * GET /admin/products/edit/{id}
+ */
+public function editProductForm(string $id): void
+{
+    Middleware::requireAdmin();
+
+    $productId = (int)$id;
+
+    // You need these two methods in ProductService:
+    // - getProductById(int $id)
+    // - getVariantsByProductId(int $productId)
+    $product = $this->productService->getProductById($productId);
+    if (!$product) {
+        $this->redirect('/admin/products?error=product_not_found');
+        return;
+    }
+
+    $variants = $this->productService->getVariantsByProductId($productId);
+
+    $this->logService->log(
+        $this->currentUserId(),
+        'Opened Product Edit Form',
+        'product',
+        $productId,
+        'Edit form opened'
+    );
+
+    $this->render('Admin/EditProduct', [
+        'title' => 'Edit Product',
+        'product' => $product,
+        'variants' => $variants
+    ]);
+}
+
+public function updateProduct(): void
+{
+    Middleware::requireAdmin();
+    $this->validateCsrf();
+
+    $productId = $this->requireProductId();
+    $existing  = $this->requireExistingProduct($productId);
+
+    $finalImagePath = $this->resolveProductImagePath($existing);
+
+    [$name, $category, $description, $price, $stock] = $this->readAndValidateProductFields();
+
+    $product = $this->buildProductEntity(
+        $productId,
+        $name,
+        $description,
+        $price,
+        $category,
+        $stock,
+        $finalImagePath
+    );
+
+    $this->persistProductOrFail($product);
+
+    $variantPayloads = $this->readVariantPayloads();
+    $this->applyVariantChanges($productId, $variantPayloads);
+
+    $this->logProductUpdate($productId);
+
+    $this->redirect('/admin/products/edit/' . $productId . '?saved=1');
+}
 
 
     // Helper methods
+
+    private function requireProductId(): int
+{
+    $productId = (int)$this->input('productId', 0);
+    if ($productId <= 0) {
+        $this->jsonResponse(['success' => false, 'message' => 'Invalid productId'], 400);
+    }
+    return $productId;
+}
+
+private function requireExistingProduct(int $productId)
+{
+    $existing = $this->productService->getProductById($productId);
+    if (!$existing) {
+        $this->jsonResponse(['success' => false, 'message' => 'Product not found'], 404);
+    }
+    return $existing;
+}
+
+private function resolveProductImagePath($existing): ?string
+{
+    // Optional upload
+    [$newImagePath, $imageError] = $this->saveUploadedProductImage($_FILES['image'] ?? []);
+    if ($imageError !== null) {
+        $this->jsonResponse(['success' => false, 'message' => $imageError], 400);
+    }
+
+    if ($newImagePath) return $newImagePath;
+
+    // Keep old image if no upload
+    if (is_array($existing)) return $existing['image'] ?? null;
+    if (is_object($existing) && method_exists($existing, 'getImage')) return $existing->getImage();
+
+    return null;
+}
+
+private function readAndValidateProductFields(): array
+{
+    $name        = trim((string)$this->input('productName', ''));
+    $category    = trim((string)$this->input('category', ''));
+    $description = trim((string)$this->input('description', ''));
+    $price       = (float)$this->input('price', 0);
+    $stock       = (int)$this->input('stock', 0);
+
+    if ($name === '' || $category === '') {
+        $this->jsonResponse(['success' => false, 'message' => 'Product name and category are required'], 400);
+    }
+    if ($price < 0) {
+        $this->jsonResponse(['success' => false, 'message' => 'Price cannot be negative'], 400);
+    }
+    if ($stock < 0) {
+        $this->jsonResponse(['success' => false, 'message' => 'Stock cannot be negative'], 400);
+    }
+
+    return [$name, $category, $description, $price, $stock];
+}
+
+private function buildProductEntity(
+    int $productId,
+    string $name,
+    string $description,
+    float $price,
+    string $category,
+    int $stock,
+    ?string $imagePath
+): Product {
+    // Match your existing constructor style used in addProduct :contentReference[oaicite:0]{index=0}
+    return new Product(
+        $productId,
+        $name,
+        $description,
+        $price,
+        $category,
+        $stock,
+        $imagePath,
+        null,
+        null,
+        true
+    );
+}
+
+private function persistProductOrFail(Product $product): void
+{
+    $ok = $this->productService->updateProduct($product);
+    if (!$ok) {
+        $this->jsonResponse(['success' => false, 'message' => 'Failed to update product'], 400);
+    }
+}
+
+/**
+ * Reads parallel arrays from POST into a safe structure.
+ */
+private function readVariantPayloads(): array
+{
+    $ids     = $this->asArray($this->input('variantId', []));
+    $sizes   = $this->asArray($this->input('variantSize', []));
+    $colours = $this->asArray($this->input('variantColour', []));
+    $stocks  = $this->asArray($this->input('variantStock', []));
+    $prices  = $this->asArray($this->input('variantPrice', []));
+    $deletes = $this->asArray($this->input('variantDelete', []));
+
+    $count = max(count($ids), count($sizes), count($colours), count($stocks), count($prices), count($deletes));
+
+    $rows = [];
+    for ($i = 0; $i < $count; $i++) {
+        $rows[] = [
+            'variantId' => (int)($ids[$i] ?? 0),
+            'delete'    => (int)($deletes[$i] ?? 0),
+            'size'      => trim((string)($sizes[$i] ?? '')),
+            'colour'    => trim((string)($colours[$i] ?? '')),
+            'stock'     => (int)($stocks[$i] ?? 0),
+            'price'     => (float)($prices[$i] ?? 0),
+        ];
+    }
+    return $rows;
+}
+
+private function applyVariantChanges(int $productId, array $variantRows): void
+{
+    foreach ($variantRows as $row) {
+        if ($this->shouldDeleteVariant($row)) {
+            $this->productService->deleteVariant((int)$row['variantId']);
+            continue;
+        }
+
+        if ($this->isVariantRowSkippable($row)) {
+            continue;
+        }
+
+        if ($this->isVariantRowInvalid($row)) {
+            // If you want: hard fail instead of skip
+            continue;
+        }
+
+        if ((int)$row['variantId'] > 0) {
+            $this->productService->updateVariantByFields(
+                (int)$row['variantId'],
+                $row['size'],
+                $row['colour'],
+                (int)$row['stock'],
+                (float)$row['price']
+            );
+        } else {
+            $this->productService->createVariantByFields(
+                $productId,
+                $row['size'],
+                $row['colour'],
+                (int)$row['stock'],
+                (float)$row['price']
+            );
+        }
+    }
+}
+
+private function shouldDeleteVariant(array $row): bool
+{
+    return ((int)$row['variantId'] > 0) && ((int)$row['delete'] === 1);
+}
+
+private function isVariantRowSkippable(array $row): bool
+{
+    // empty new row (e.g. user clicked add then didn't fill it)
+    return $row['size'] === '' && $row['colour'] === '' && (int)$row['variantId'] === 0;
+}
+
+private function isVariantRowInvalid(array $row): bool
+{
+    // incomplete variant row
+    if ($row['size'] === '' || $row['colour'] === '') return true;
+    if ((int)$row['stock'] < 0) return true;
+    if ((float)$row['price'] < 0) return true;
+    return false;
+}
+
+private function logProductUpdate(int $productId): void
+{
+    $this->logService->log(
+        $this->currentUserId(),
+        'Updated Product + Variants',
+        'product',
+        $productId,
+        'Product updated (including variants)'
+    );
+}
+
+private function asArray($value): array
+{
+    return is_array($value) ? $value : [];
+}
+
     private function getOrdersCount(): int
     {
         // Placeholder - will be implemented with OrderRepository

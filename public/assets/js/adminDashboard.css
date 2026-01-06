@@ -1,0 +1,41 @@
+/** @format */
+
+document.addEventListener("DOMContentLoaded", () => {
+	// Admin nav mobile toggle
+	const toggle = document.getElementById("adminNavToggle");
+	const items = document.getElementById("adminNavItems");
+
+	toggle?.addEventListener("click", () => {
+		items?.classList.toggle("is-open");
+	});
+
+	// Highlight current admin link
+	const path = window.location.pathname;
+	document.querySelectorAll("[data-admin-link]").forEach((a) => {
+		const href = a.getAttribute("href") || "";
+		if (href && (path === href || (href !== "/admin/dashboard" && path.startsWith(href)))) {
+			a.classList.add("is-active");
+		}
+	});
+
+	// Search/filter action cards
+	const search = document.getElementById("adminSearch");
+	const cardsWrap = document.getElementById("adminCards");
+	const cards = cardsWrap ? Array.from(cardsWrap.querySelectorAll(".admin-card")) : [];
+
+	const applyFilter = (q) => {
+		const query = (q || "").trim().toLowerCase();
+		let visible = 0;
+
+		cards.forEach((card) => {
+			const hay = (card.getAttribute("data-title") || card.textContent || "").toLowerCase();
+			const ok = query === "" || hay.includes(query);
+			card.style.display = ok ? "" : "none";
+			if (ok) visible++;
+		});
+
+		cardsWrap?.setAttribute("aria-label", `Admin actions, ${visible} shown`);
+	};
+
+	search?.addEventListener("input", (e) => applyFilter(e.target.value));
+});

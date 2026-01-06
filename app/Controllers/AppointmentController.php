@@ -23,7 +23,7 @@ final class AppointmentController extends ControllerBase
         $userId = $this->currentUserId();
         $appointments = $this->service->getUserAppointments((int)$userId);
 
-        $this->render('Appointments/Index', [
+        $this->render('Appointment/Index', [
             'title' => 'My Appointments',
             'appointments' => $appointments
         ]);
@@ -34,7 +34,7 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
-        $this->render('Appointments/Book', [
+        $this->render('Appointment/Book', [
             'title' => 'Book Appointment'
         ]);
     }
@@ -151,7 +151,7 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAdmin();
         $appointments = $this->service->adminGetAllAppointments();
 
-        $this->render('Admin/Appointments/Index', [
+        $this->render('Admin/Appointment/Index', [
             'title' => 'Appointments',
             'appointments' => $appointments
         ]);

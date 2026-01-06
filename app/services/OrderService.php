@@ -106,6 +106,13 @@ class OrderService implements IOrderService
         return $order;
     }
 
+public function getAllOrders(): array
+{
+    // Repository already returns Order objects
+    return $this->orderRepo->getAll();
+}
+
+
     /** Customer: cancel order (only before shipped/delivered) */
     public function cancelMyOrder(int $userId, int $orderId): bool
     {

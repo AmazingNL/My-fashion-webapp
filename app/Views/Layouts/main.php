@@ -76,10 +76,11 @@
                         <div class="navbar__dropdown" id="userDropdown">
                             <a href="/profile" class="navbar__dropdown-item">My Profile</a>
                             <a href="/orders" class="navbar__dropdown-item">My Orders</a>
-                            <a href="/my-appointments" class="navbar__dropdown-item">My Appointments</a>
-                            <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+                            <a href="/appointments" class="navbar__dropdown-item">My Appointments</a>
+                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                                 <hr class="navbar__dropdown-divider">
-                                <a href="/admin" class="navbar__dropdown-item navbar__dropdown-item--admin">Admin Panel</a>
+                                <a href="/admin/dashboard" class="navbar__dropdown-item navbar__dropdown-item--admin">Admin
+                                    Panel</a>
                             <?php endif; ?>
                             <hr class="navbar__dropdown-divider">
                             <a href="/logout" class="navbar__dropdown-item navbar__dropdown-item--logout">Logout</a>

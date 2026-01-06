@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Repositories\IProductRepository;
-use App\Services\IProductService;
 
 class ProductService implements IProductService
 {
@@ -16,10 +15,13 @@ class ProductService implements IProductService
         $this->productRepository = $productRepository;
     }
 
+    /* =========================
+       Public (existing) methods
+       ========================= */
+
     public function getProductDetails($id): array
     {
         try {
-            // Step 1: Get the product
             $product = $this->productRepository->getProductById($id);
 
             if (!$product) {
@@ -33,14 +35,12 @@ class ProductService implements IProductService
                 ];
             }
 
-            // Step 2: Get variants
             $variants = $this->productRepository->getVariantsByProductId($id);
 
-            // FIXED: Return consistent structure even with no variants
             if (empty($variants)) {
                 error_log("WARNING: Product ID $id has no variants");
                 return [
-                    'product' => $product,  // FIXED: Include product
+                    'product' => $product,
                     'variants' => [],
                     'sizes' => [],
                     'colors' => [],
@@ -48,7 +48,6 @@ class ProductService implements IProductService
                 ];
             }
 
-            // Step 3: Extract unique sizes and colors
             $sizes = [];
             $colors = [];
 
@@ -69,7 +68,6 @@ class ProductService implements IProductService
                 'colors' => array_keys($colors),
                 'errors' => [],
             ];
-
         } catch (\Throwable $e) {
             return [
                 'product' => null,
@@ -94,11 +92,7 @@ class ProductService implements IProductService
     public function getSimilarProducts(int $productId, string $category, int $limit = 4): array
     {
         try {
-            return $this->productRepository->findSimilarProducts(
-                $productId,
-                $category,
-                $limit
-            );
+            return $this->productRepository->findSimilarProducts($productId, $category, $limit);
         } catch (\Throwable $e) {
             error_log("Failed to fetch similar products: " . $e->getMessage());
             return [];
@@ -116,11 +110,11 @@ class ProductService implements IProductService
             unset($session[$productId]);
             $_SESSION['favourites'] = $session;
             return ['productId' => $productId, 'favourited' => false];
-        } else {
-            $session[$productId] = true;
-            $_SESSION['favourites'] = $session;
-            return ['productId' => $productId, 'favourited' => true];
         }
+
+        $session[$productId] = true;
+        $_SESSION['favourites'] = $session;
+        return ['productId' => $productId, 'favourited' => true];
     }
 
     public function addToBasket($variantId, $quantity): array
@@ -132,7 +126,6 @@ class ProductService implements IProductService
 
         if (isset($basket[$variantId])) {
             $basket[$variantId] += $quantity;
-            
         } else {
             $basket[$variantId] = $quantity;
         }
@@ -140,74 +133,6 @@ class ProductService implements IProductService
         $_SESSION['basket'] = $basket;
 
         return ['variantId' => $variantId, 'quantity' => $basket[$variantId]];
-    }
-
-    public function createProductWithVariants(Product $product, array $variantsInput): array
-    {
-        $errors = [];
-
-        // Validate product
-        if (trim((string) $product->getName()) === '')
-            $errors[] = 'Name is required.';
-        if ($product->getPrice() <= 0)
-            $errors[] = 'Price must be greater than 0.';
-        if ($product->getStock() < 0)
-            $errors[] = 'Stock cannot be negative.';
-
-        $rows = $variantsInput;
-        if (!is_array($rows) || count($rows) === 0) {
-            $errors[] = 'At least one variant is required.';
-        }
-
-        if (!$errors) {
-            foreach ($rows as $idx => $v) {
-                $size = trim((string) ($v['size'] ?? ''));
-                $colour = trim((string) (($v['colour'] ?? $v['color']) ?? ''));
-                $vStock = (int) (($v['stockQuantity'] ?? $v['stock']) ?? 0);
-
-                if ($size === '' || $colour === '') {
-                    $errors[] = "Variant #" . ($idx + 1) . ": size and color are required.";
-                }
-                if ($vStock < 0) {
-                    $errors[] = "Variant #" . ($idx + 1) . ": stock must be 0 or more.";
-                }
-            }
-        }
-
-        if ($errors)
-            return ['errors' => $errors];
-
-        $count = count($rows);
-
-        // Transaction: product + variants
-        $this->productRepository->beginTransaction();
-        try {
-            $productId = $this->productRepository->save($product);
-
-            for ($i = 0; $i < $count; $i++) {
-                $v = $rows[$i];
-                $size = trim((string) $v['size']);
-                $colour = trim((string) (($v['colour'] ?? $v['color']) ?? ''));
-                $vStock = (int) (($v['stockQuantity'] ?? $v['stock']) ?? 0);
-
-                $variant = new ProductVariant(
-                    null,
-                    $productId,
-                    $size,
-                    $colour,
-                    $vStock
-                );
-
-                $this->productRepository->saveVariant($variant);
-            }
-
-            $this->productRepository->commit();
-            return ['errors' => []];
-        } catch (\Throwable $e) {
-            $this->productRepository->rollBack();
-            error_log("Failed to save product and variants: " . $e->getMessage());
-            return ['errors' => ['Failed to save product and variants.']];
-        }
     }
 
     public function getProductById($id): ?Product
@@ -221,12 +146,57 @@ class ProductService implements IProductService
     }
 
 
+
+    public function createProductWithVariants(Product $product, array $variantsInput): array
+    {
+        $errors = array_merge(
+            $this->validateProduct($product),
+            $this->validateVariantsInput($variantsInput)
+        );
+
+        if (!empty($errors))
+            return ['errors' => $errors];
+
+        $rows = $this->normalizeVariantRows($variantsInput);
+
+        $this->productRepository->beginTransaction();
+        try {
+            $productId = $this->productRepository->save($product);
+
+            foreach ($rows as $row) {
+                $variant = new ProductVariant(
+                    null,
+                    $productId,
+                    $row['size'],
+                    $row['colour'],
+                    $row['stockQuantity']
+                );
+                $this->productRepository->saveVariant($variant);
+            }
+
+            $this->productRepository->commit();
+            return ['errors' => []];
+        } catch (\Throwable $e) {
+            $this->productRepository->rollBack();
+            error_log("Failed to save product and variants: " . $e->getMessage());
+            return ['errors' => ['Failed to save product and variants.']];
+        }
+    }
+
+    /* =========================
+       Product admin 
+       ========================= */
+
     public function updateProduct(Product $product): array
     {
         try {
+            $errors = $this->validateProduct($product);
+            if (!empty($errors))
+                return ['error' => implode(' ', $errors)];
+
             $this->productRepository->update($product);
             return ['success' => 'Product updated successfully'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log("Failed to update product: " . $e->getMessage());
             return ['error' => 'Failed to update product'];
         }
@@ -235,11 +205,205 @@ class ProductService implements IProductService
     public function deleteProduct($id): array
     {
         try {
-            $this->productRepository->getProductById($id);
+            $product = $this->productRepository->getProductById((int) $id);
+            if (!$product)
+                return ['error' => 'Product not found'];
+
+            // IMPORTANT: your repository delete() should deactivate by productId
+            $this->productRepository->delete((int) $id);
+
             return ['success' => 'Product deleted successfully'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log("Failed to delete product: " . $e->getMessage());
-            return ['error' => 'Product not found'];
+            return ['error' => 'Failed to delete product'];
         }
+    }
+
+    /* =========================
+       Variant admin API
+       ========================= */
+
+    public function getVariantsByProductId(int $productId): array
+    {
+        try {
+            return $this->productRepository->getVariantsByProductId($productId);
+        } catch (\Throwable $e) {
+            error_log("Failed to load variants: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function addVariantToProduct(ProductVariant $variant): array
+    {
+        $errors = $this->validateVariant($variant);
+        if (!empty($errors))
+            return ['error' => implode(' ', $errors)];
+
+        try {
+            $product = $this->productRepository->getProductById($variant->getProductId());
+            if (!$product)
+                return ['error' => 'Product not found'];
+
+            $this->productRepository->saveVariant($variant);
+            return ['success' => 'Variant added successfully'];
+        } catch (\Throwable $e) {
+            error_log("Failed to add variant: " . $e->getMessage());
+            return ['error' => 'Failed to add variant'];
+        }
+    }
+
+
+    // Wrapper so controllers can call updateVariant(id, size, colour, stock, price)
+    public function updateVariantByFields(
+        int $variantId,
+        string $size,
+        string $colour,
+        int $stockQuantity,
+        float $price
+    ): array {
+        $variant = $this->productRepository->getVariantById($variantId);
+        if (!$variant)
+            return ['error' => 'Variant not found'];
+
+        // If your ProductVariant model does NOT have price, keep it 0 or ignore it
+        $v = new ProductVariant(
+            $variantId,
+            (int) $variant->getProductId(),
+            $size,
+            $colour,
+            $stockQuantity
+        );
+
+        return $this->updateVariant($v);
+    }
+
+    // Wrapper so controllers can call createVariant(productId, size, colour, stock, price)
+    public function createVariantByFields(
+        int $productId,
+        string $size,
+        string $colour,
+        int $stockQuantity,
+        float $price
+    ): array {
+        $v = new ProductVariant(
+            null,
+            $productId,
+            $size,
+            $colour,
+            $stockQuantity
+        );
+
+        return $this->addVariantToProduct($v);
+    }
+
+    public function updateVariant(ProductVariant $variant): array
+    {
+        if ($variant->getVariantId() === null)
+            return ['error' => 'VariantId is required'];
+
+        $errors = $this->validateVariant($variant);
+        if (!empty($errors))
+            return ['error' => implode(' ', $errors)];
+
+        try {
+            $existing = $this->productRepository->getVariantById((int) $variant->getVariantId());
+            if (!$existing)
+                return ['error' => 'Variant not found'];
+
+            // Repo must implement updateVariant(ProductVariant $variant)
+            $this->productRepository->updateVariant($variant);
+
+            return ['success' => 'Variant updated successfully'];
+        } catch (\Throwable $e) {
+            error_log("Failed to update variant: " . $e->getMessage());
+            return ['error' => 'Failed to update variant'];
+        }
+    }
+
+    public function deleteVariant(int $variantId): array
+    {
+        try {
+            $existing = $this->productRepository->getVariantById($variantId);
+            if (!$existing)
+                return ['error' => 'Variant not found'];
+
+            // Repo must implement deleteVariant(int $variantId)
+            $this->productRepository->deleteVariant($variantId);
+
+            return ['success' => 'Variant deleted successfully'];
+        } catch (\Throwable $e) {
+            error_log("Failed to delete variant: " . $e->getMessage());
+            return ['error' => 'Failed to delete variant'];
+        }
+    }
+
+    /* =========================
+       Private helpers
+       ========================= */
+
+    private function validateProduct(Product $product): array
+    {
+        $errors = [];
+
+        if (trim((string) $product->getName()) === '')
+            $errors[] = 'Name is required.';
+        if ((float) $product->getPrice() <= 0)
+            $errors[] = 'Price must be greater than 0.';
+        if ((int) $product->getStock() < 0)
+            $errors[] = 'Stock cannot be negative.';
+
+        return $errors;
+    }
+
+    private function validateVariantsInput(array $variantsInput): array
+    {
+        if (!is_array($variantsInput) || count($variantsInput) === 0) {
+            return ['At least one variant is required.'];
+        }
+
+        $errors = [];
+        foreach ($variantsInput as $idx => $v) {
+            $size = trim((string) ($v['size'] ?? ''));
+            $colour = trim((string) (($v['colour'] ?? $v['color']) ?? ''));
+            $stock = (int) (($v['stockQuantity'] ?? $v['stock']) ?? 0);
+
+            if ($size === '' || $colour === '') {
+                $errors[] = "Variant #" . ($idx + 1) . ": size and color are required.";
+            }
+            if ($stock < 0) {
+                $errors[] = "Variant #" . ($idx + 1) . ": stock must be 0 or more.";
+            }
+        }
+
+        return $errors;
+    }
+
+    private function normalizeVariantRows(array $variantsInput): array
+    {
+        $rows = [];
+        foreach ($variantsInput as $v) {
+            $rows[] = [
+                'size' => trim((string) ($v['size'] ?? '')),
+                'colour' => trim((string) (($v['colour'] ?? $v['color']) ?? '')),
+                'stockQuantity' => (int) (($v['stockQuantity'] ?? $v['stock']) ?? 0),
+            ];
+        }
+        return $rows;
+    }
+
+    private function validateVariant(ProductVariant $variant): array
+    {
+        $errors = [];
+
+        if ($variant->getProductId() <= 0)
+            $errors[] = 'Variant productId is invalid.';
+        if (trim((string) $variant->getSize()) === '')
+            $errors[] = 'Variant size is required.';
+        if (trim((string) $variant->getColour()) === '')
+            $errors[] = 'Variant colour is required.';
+        if ((int) $variant->getStockQuantity() < 0)
+            $errors[] = 'Variant stockQuantity cannot be negative.';
+
+        return $errors;
     }
 }

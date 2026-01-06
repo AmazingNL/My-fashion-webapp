@@ -14,4 +14,22 @@ interface IActivityLogRepository
     public function getByUser(int $userId, int $limit = 100): array;
     public function getByAction(string $action, int $limit = 100): array;
     public function deleteOlderThan(int $days): int;
+    public function getFiltered(
+        ?int $userId,
+        ?string $action,
+        ?string $dateFrom,
+        ?string $dateTo,
+        int $limit = 100,
+        int $offset = 0
+    ): array;
+
+    public function countFiltered(
+        ?int $userId,
+        ?string $action,
+        ?string $dateFrom,
+        ?string $dateTo
+    ): int;
+
+    public function deleteAll(): int;
+
 }

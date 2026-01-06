@@ -51,7 +51,20 @@ class Router
             $r->addRoute('GET', '/admin/products', ['App\Controllers\AdminController', 'manageProducts']);
             $r->addRoute('GET', '/admin/addProductForm', ['App\Controllers\AdminController', 'addProductForm']);
             $r->addRoute('POST', '/admin/addProduct', ['App\Controllers\AdminController', 'addProduct']);
-            $r->addRoute('GET', '/admin/activity', ['App\Controllers\AdminController', 'activityLogs']);
+            $r->addRoute('GET', '/admin/activity', ['App\Controllers\AdminController', 'viewLogs']);
+            $r->addRoute('GET', '/admin/activity-logs', ['App\Controllers\ActivityLogController', 'adminIndex']);
+            $r->addRoute('GET', '/admin/activity-logs/api', ['App\Controllers\ActivityLogController', 'apiList']);
+            $r->addRoute('POST', '/admin/activity-logs/export', ['App\Controllers\ActivityLogController', 'export']);
+            $r->addRoute('POST', '/admin/activity-logs/purge', ['App\Controllers\ActivityLogController', 'purge']);
+            $r->addRoute('POST', '/admin/activity-logs/clear', ['App\Controllers\ActivityLogController', 'clear']);
+            $r->addRoute('GET', '/admin/orders', ['App\Controllers\AdminController', 'manageOrders']);
+            $r->addRoute('POST', '/admin/users/status', ['App\Controllers\AdminController', 'updateUserStatus']);
+            $r->addRoute('POST', '/admin/products/delete', ['App\Controllers\AdminController', 'deleteProduct']);
+            $r->addRoute('GET', '/admin/products/edit/{id}', ['App\Controllers\AdminController', 'editProductForm']);
+            $r->addRoute('POST', '/admin/products/update', ['App\Controllers\AdminController', 'updateProduct']);
+            $r->addRoute('GET', '/admin/orders/api', ['App\Controllers\OrderController', 'adminApiList']);
+            $r->addRoute('GET', '/admin/orders/{id:\d+}/items/api', ['App\Controllers\OrderController', 'adminApiItems']);
+
 
             // Orders + Checkout
             $r->addRoute('GET', '/orders', ['App\Controllers\OrderController', 'index']);
@@ -80,8 +93,6 @@ class Router
             $r->addRoute('GET', '/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
             $r->addRoute('POST', '/admin/appointments/slots/add', ['App\Controllers\AppointmentController', 'adminAddSlot']);
             $r->addRoute('POST', '/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
-
-
 
 
         });
@@ -123,7 +134,7 @@ class Router
                         $userRepository = new \App\Repositories\UserRepository();
                         $activityLogRepository = new \App\Repositories\ActivityLogRepository();
                         $userService = new \App\Services\UserService($userRepository);
-                        $activityLogService = new \App\services\ActivityLogService($activityLogRepository);
+                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
                         $controller = new $class($userService, $activityLogService);
                         break;
 
@@ -181,6 +192,23 @@ class Router
                         $slotRepo = new \App\Repositories\AppointmentSlotRepository();
                         $service = new \App\Services\AppointmentService($appointmentRepo, $slotRepo);
                         $controller = new $class($service);
+                        break;
+
+
+                    case \App\Controllers\AdminController::class:
+                        $productRepository = new \App\Repositories\ProductRepository();
+                        $userRepository = new \App\Repositories\UserRepository();
+                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
+                        $productService = new \App\Services\ProductService($productRepository);
+                        $userService = new \App\Services\UserService($userRepository);
+                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
+                        $controller = new $class($productService, $userService, $activityLogService);
+                        break;
+
+                    case \App\Controllers\ActivityLogController::class:
+                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
+                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
+                        $controller = new $class($activityLogService);
                         break;
 
 
