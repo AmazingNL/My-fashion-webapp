@@ -77,7 +77,7 @@ class AdminController extends ControllerBase
         $this->render('Admin/ManageProducts', [
             'title' => 'Manage Products',
             'products' => $products
-        ]);
+        ], 'admin');
     }
 
     /**
@@ -100,7 +100,7 @@ class AdminController extends ControllerBase
         $this->render('Admin/ManageUsers', [
             'title' => 'Manage Users',
             'users' => $users
-        ]);
+        ], 'admin');
     }
 
     /**
@@ -124,7 +124,7 @@ class AdminController extends ControllerBase
         $this->render('Admin/ManageOrders', [
             'title' => 'Manage Orders',
             'orders' => $orders
-        ]);
+        ], 'admin');
     }
 
     /**
@@ -148,7 +148,7 @@ class AdminController extends ControllerBase
         $this->render('Admin/ManageAppointments', [
             'title' => 'Manage Appointments',
             'appointments' => $appointments
-        ]);
+        ], 'admin');
     }
 
     /**
@@ -176,7 +176,7 @@ class AdminController extends ControllerBase
             'title' => 'Activity Logs',
             'logs' => $logs,
             'currentPage' => $page
-        ]);
+        ], 'admin');
     }
 
     /**
@@ -273,7 +273,7 @@ class AdminController extends ControllerBase
         Middleware::requireAdmin();
 
         // Render the add product form (implementation depends on your templating system)
-        $this->render('Admin/AddProductForm', ['title' => 'Add Product',]);
+        $this->render('Admin/AddProductForm', ['title' => 'Add Product',], 'admin');
     }
     public function addProduct(): void
     {
@@ -392,7 +392,7 @@ public function editProductForm(string $id): void
         'title' => 'Edit Product',
         'product' => $product,
         'variants' => $variants
-    ]);
+    ], 'admin');
 }
 
 public function updateProduct(): void

@@ -10,7 +10,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
             <p class="muted">Loaded from your JSON API. Fast, clean, no page refresh acrobatics.</p>
         </div>
     </header>
-
+<!--
     <nav class="admin-nav card" aria-label="Admin actions">
         <button class="admin-nav__toggle" id="adminNavToggle" type="button" aria-label="Toggle admin navigation">
             ☰ Admin Menu
@@ -33,7 +33,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
             </label>
         </div>
     </nav>
-
+-->
     <div class="notice notice--success" id="ordOk" hidden></div>
     <div class="notice notice--error" id="ordErr" hidden></div>
 

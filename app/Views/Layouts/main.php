@@ -83,7 +83,13 @@
                                     Panel</a>
                             <?php endif; ?>
                             <hr class="navbar__dropdown-divider">
-                            <a href="/logout" class="navbar__dropdown-item navbar__dropdown-item--logout">Logout</a>
+                            <form class="navbar__dropdown-item " action="/logout" method="POST" style="display:inline;">
+                                <?= $this->csrfField(); ?>
+                                <button type="submit" class="navbar__dropdown-item navbar__dropdown-item--logout">
+                                    Logout
+                                </button>
+                            </form>
+
                         </div>
                     </div>
                 <?php else: ?>

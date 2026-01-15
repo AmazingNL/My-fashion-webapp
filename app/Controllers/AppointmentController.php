@@ -154,7 +154,7 @@ final class AppointmentController extends ControllerBase
         $this->render('Admin/Appointment/Index', [
             'title' => 'Appointments',
             'appointments' => $appointments
-        ]);
+        ], 'admin');
     }
 
     public function adminAddSlot(): void

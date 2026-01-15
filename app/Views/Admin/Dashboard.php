@@ -41,7 +41,7 @@ $recent = $stats['recentActivities'] ?? [];
         </div>
     </header>
 
-    <!-- Admin action navbar -->
+    <!-- Admin action navbar 
     <nav class="admin-nav card" aria-label="Admin actions">
         <button class="admin-nav__toggle" id="adminNavToggle" type="button" aria-label="Toggle admin navigation">
             ☰ Admin Menu
@@ -64,7 +64,7 @@ $recent = $stats['recentActivities'] ?? [];
             </label>
         </div>
     </nav>
-
+    -->
     <!-- Action cards -->
     <section class="admin-grid" id="adminCards" aria-live="polite">
         <a class="admin-card card" href="/admin/products" data-title="products manage products catalogue">

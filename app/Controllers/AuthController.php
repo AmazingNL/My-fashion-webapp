@@ -64,11 +64,13 @@ class AuthController extends ControllerBase
 
 
 
-    public function logout()
+    public function logout(): void
     {
-        session_start();
+        $this->ensureSession();      // safer than session_start() here
+        $_SESSION = [];
         session_destroy();
-        header('Location: /login');
-        exit();
+
+        $this->redirect('/');        // your login page
     }
+
 }

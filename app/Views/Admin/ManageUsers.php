@@ -31,7 +31,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
         </div>
     </header>
 
-    <!-- Admin action navbar -->
+    <!-- Admin action navbar 
     <nav class="admin-nav card" aria-label="Admin actions">
         <button class="admin-nav__toggle" id="adminNavToggle" type="button" aria-label="Toggle admin navigation">
             ☰ Admin Menu
@@ -54,7 +54,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
             </label>
         </div>
     </nav>
-
+-->
     <div class="notice notice--success" id="userOk" hidden></div>
     <div class="notice notice--error" id="userErr" hidden></div>
 
