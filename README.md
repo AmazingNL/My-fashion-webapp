@@ -63,7 +63,7 @@ composer install
 - Admin dashboard: `/admin/dashboard`
 
 ## Login Credentials
-- **Admin:** `admin@nuellasignet.com` / `Admin123!` (seeded in `database/schema.sql`)
+- **Admin:** `admin@email.com` / `Admin123!` (seeded in `database/schema.sql`)
 - **Customer:** register a new account via `/showRegistrationForm`
 
 ## Folder Structure
