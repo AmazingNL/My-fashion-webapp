@@ -1,19 +1,9 @@
 # Custom Female Clothing Web App
 
 ## Project Description
-A boutique e-commerce and appointment-booking site for custom women’s fashion. Customers can browse products, add items to a cart, place orders, and book design consultations. Admins get a dashboard to manage products, orders, appointments, and activity logs.
-
-## Features
-- Product catalog with size/color variants
-- Cart and checkout flow
-- Appointment booking with live slot availability (JSON API)
-- Admin dashboard for products, orders, appointments, and activity logs
-- Session-based authentication and CSRF protection
-
-## Tech Stack
-- **Backend:** PHP (custom MVC), FastRoute
-- **Database:** MariaDB/MySQL (PDO)
-An e-commerce and booking platform for a custom women’s fashion boutique. Customers can browse products, add items to a cart, place orders, and book design appointments. Admins can manage products, orders, appointments, and user activity.
+A boutique e-commerce and appointment-booking site for custom women’s fashion. 
+Customers can browse products, add items to a cart, place orders, and book design consultations. 
+Admins get a dashboard to manage products, orders, appointments, and activity logs.
 
 ## Features
 - Product catalog with variants (size/color) and detail pages
@@ -285,4 +275,3 @@ CREATE TABLE activity_logs (
 
 ## Notes
 - The project is fully Dockerized and can be started with `docker-compose up -d`.
-- If you need a ZIP for submission, zip the whole project folder after confirming the database export is present.
