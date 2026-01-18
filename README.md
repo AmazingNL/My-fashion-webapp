@@ -63,7 +63,8 @@ composer install
 - Admin dashboard: `/admin/dashboard`
 
 ## Login Credentials
-- **Admin:** `admin@email.com` / `Admin123!` (seeded in `database/schema.sql`)
+- **Admin:** `admin@email.com` / `Admin123!` 
+- **Customer:** `amazinggraceiruomanl@gmail.com` / `brainman15$`
 - **Customer:** register a new account via `/showRegistrationForm`
 
 ## Folder Structure
