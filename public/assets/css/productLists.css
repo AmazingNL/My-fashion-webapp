@@ -1,0 +1,545 @@
+/** @format */
+/* ============================================
+   PRODUCT LISTING PAGE - AFRO THEME (CLEAN FULL CSS)
+   Uses main.css variables + buttons + fields
+   ============================================ */
+
+@import url("/assets/css/main.css");
+
+/* Push toast below the sticky navbar */
+.toast {
+	top: 6.5rem; 
+	z-index: 9999;
+}
+
+/* Page shell */
+.shell {
+	background: linear-gradient(
+		180deg,
+		rgba(248, 243, 232, 0.95) 0%,
+		rgba(255, 255, 255, 0.98) 100%
+	);
+	border-radius: 1rem;
+	box-shadow: 0 8px 32px rgba(92, 64, 51, 0.12);
+	max-width: 1400px;
+	margin: 3rem auto;
+	padding: 0;
+}
+
+/* Store Header */
+.store__top {
+	background: var(--afro-sunset);
+	padding: 2rem;
+	border-radius: 1rem 1rem 0 0;
+	color: white;
+	position: relative;
+	overflow: hidden;
+}
+
+.store__top::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 220px;
+	height: 220px;
+	background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.1)"/><circle cx="30" cy="30" r="20" fill="rgba(255,255,255,0.05)"/><circle cx="70" cy="70" r="25" fill="rgba(255,255,255,0.08)"/></svg>');
+	opacity: 0.6;
+	animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+	0%,
+	100% {
+		transform: translateY(0) rotate(0deg);
+	}
+	50% {
+		transform: translateY(-20px) rotate(10deg);
+	}
+}
+
+.store__top h1 {
+	font-size: 2.5rem;
+	font-weight: 800;
+	margin: 0 0 0.5rem 0;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+	position: relative;
+	z-index: 1;
+}
+
+.store__top h1::after {
+	content: "";
+	display: block;
+	width: 80px;
+	height: 4px;
+	background: white;
+	margin-top: 0.5rem;
+	border-radius: 2px;
+}
+
+.store__top .muted {
+	color: rgba(255, 255, 255, 0.95);
+	font-size: 1.1rem;
+	position: relative;
+	z-index: 1;
+}
+
+/* Header actions */
+.store__actions {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-top: 1.5rem;
+}
+
+/* Search Bar */
+.search {
+	flex: 1;
+	min-width: 250px;
+	padding: 0.875rem 1.25rem;
+	border: 3px solid rgba(255, 255, 255, 0.4);
+	border-radius: 2rem;
+	background: rgba(255, 255, 255, 0.95);
+	font-size: 1rem;
+	color: var(--text-primary);
+	transition: all 0.3s ease;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.search:focus {
+	outline: none;
+	border-color: var(--afro-gold);
+	background: white;
+	box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+	transform: translateY(-2px);
+}
+
+.search::placeholder {
+	color: var(--afro-brown);
+	opacity: 0.6;
+}
+
+/* Filter toggle button (desktop hidden, mobile shown) */
+.store__filterBtn {
+	display: none;
+	white-space: nowrap;
+}
+
+/* Cart badge (if used on this page) */
+.dot {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--afro-burgundy);
+	color: white;
+	padding: 0.25rem 0.625rem;
+	border-radius: 1rem;
+	font-size: 0.875rem;
+	font-weight: 800;
+	min-width: 1.75rem;
+	text-align: center;
+	transition: transform 0.3s ease;
+	box-shadow: 0 2px 8px rgba(139, 30, 63, 0.4);
+}
+
+.dot.pulse {
+	animation: afro-pulse-badge 0.5s ease;
+}
+
+@keyframes afro-pulse-badge {
+	0%,
+	100% {
+		transform: scale(1);
+		box-shadow: 0 2px 8px rgba(139, 30, 63, 0.4);
+	}
+	50% {
+		transform: scale(1.35);
+		box-shadow: 0 4px 16px rgba(139, 30, 63, 0.6);
+	}
+}
+
+/* ============================================
+   LAYOUT: FILTERS + GRID
+   ============================================ */
+
+.store__layout {
+	display: grid;
+	grid-template-columns: 320px 1fr;
+	gap: 2rem;
+	align-items: start;
+	padding: 2rem;
+}
+
+/* Filter Panel */
+.filters {
+	background: rgba(255, 255, 255, 0.92);
+	border-radius: 1rem;
+	box-shadow: 0 8px 32px rgba(92, 64, 51, 0.12);
+	border: 2px solid var(--border-light);
+	padding: 1.25rem;
+	position: sticky;
+	top: 6.75rem;
+}
+
+.filters__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.filters__title {
+	margin: 0;
+	font-size: 1.35rem;
+	color: var(--text-primary);
+}
+
+.filters__close {
+	display: none;
+}
+
+.filters__section {
+	padding: 1rem 0;
+	border-top: 1px solid var(--border-light);
+}
+
+.filters__section:first-of-type {
+	border-top: none;
+	padding-top: 0;
+}
+
+.filters__heading {
+	font-weight: 800;
+	color: var(--text-primary);
+	margin-bottom: 0.75rem;
+}
+
+.filters__list {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.filters__item {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.7rem 0.85rem;
+	border-radius: 1rem;
+	border: 2px solid rgba(212, 115, 94, 0.18);
+	background: rgba(245, 230, 211, 0.18);
+	cursor: pointer;
+	user-select: none;
+	transition: transform 0.18s ease, box-shadow 0.18s ease,
+		border-color 0.18s ease;
+}
+
+.filters__item:hover {
+	transform: translateY(-2px);
+	border-color: var(--afro-gold);
+	box-shadow: 0 10px 18px rgba(92, 64, 51, 0.10);
+}
+
+.filters__item input {
+	accent-color: var(--afro-burgundy);
+}
+
+.filters__row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+	margin-top: 0.9rem;
+}
+
+.filters__actions {
+	padding-top: 1rem;
+	border-top: 1px solid var(--border-light);
+}
+
+/* ============================================
+   GRID (WIDER CARDS)
+   ============================================ */
+
+.grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 1.6rem;
+}
+
+/* Responsive grid like admin style */
+@media (max-width: 1400px) {
+	.grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 1024px) {
+	.grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 560px) {
+	.grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ============================================
+   PRODUCT CARDS (SQUARE IMAGE + COMPACT TEXT)
+   ============================================ */
+
+.card {
+	position: relative;
+	background: white;
+	border-radius: 1rem;
+	overflow: hidden;
+	transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	box-shadow: 0 4px 16px rgba(92, 64, 51, 0.1);
+	border: 3px solid transparent;
+
+	padding: 0; /* override main.css card padding */
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 5px;
+	background: linear-gradient(
+		90deg,
+		var(--afro-burgundy) 0%,
+		var(--afro-gold) 50%,
+		var(--afro-terracotta) 100%
+	);
+	transform: scaleX(0);
+	transition: transform 0.35s ease;
+	z-index: 2;
+}
+
+.card:hover::before {
+	transform: scaleX(1);
+}
+
+.card:hover {
+	transform: translateY(-10px);
+	box-shadow: 0 16px 40px rgba(139, 30, 63, 0.22);
+	border-color: var(--afro-gold);
+}
+
+.card__link {
+	text-decoration: none;
+	color: inherit;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+/* Square image */
+.card__img {
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	object-fit: cover;
+	display: block;
+	transition: transform 0.5s ease;
+}
+
+.card:hover .card__img {
+	transform: scale(1.06);
+}
+
+/* Title clamp (keeps cards uniform) */
+.card__title {
+	padding: 0.95rem 1rem 0.35rem;
+	font-size: 1.05rem;
+	font-weight: 900;
+	color: var(--text-primary);
+	margin: 0;
+	line-height: 1.25;
+
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.card:hover .card__title {
+	color: var(--afro-burgundy);
+}
+
+/* Meta: price + category */
+.card__meta {
+	padding: 0 1rem 1rem;
+	display: grid;
+	gap: 0.35rem;
+	margin-top: auto;
+}
+
+.card__price {
+	font-size: 1.2rem;
+	font-weight: 900;
+	background: linear-gradient(
+		135deg,
+		var(--afro-burgundy),
+		var(--afro-terracotta)
+	);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+.card__category {
+	color: var(--afro-forest);
+	font-size: 0.82rem;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.8px;
+
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Favourite Heart Button */
+.card__fav {
+	position: absolute;
+	top: 1rem;
+	right: 1rem;
+	background: rgba(255, 255, 255, 0.95);
+	border: 3px solid var(--afro-gold);
+	border-radius: 50%;
+	width: 3.35rem;
+	height: 3.35rem;
+	font-size: 1.65rem;
+	cursor: pointer;
+	transition: all 0.28s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+	color: var(--afro-clay);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+	z-index: 10;
+}
+
+.card__fav:hover {
+	transform: scale(1.15) rotate(10deg);
+	background: white;
+	box-shadow: 0 8px 24px rgba(212, 175, 55, 0.5);
+	border-color: var(--afro-burgundy);
+}
+
+.card__fav.is-on {
+	background: var(--afro-vibrant);
+	color: white;
+	border-color: var(--afro-burgundy);
+	animation: afro-heartbeat 0.6s ease;
+}
+
+.card__fav.is-on:hover {
+	transform: scale(1.15) rotate(-10deg);
+	box-shadow: 0 8px 24px rgba(139, 30, 63, 0.6);
+}
+
+.card__fav:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: scale(1);
+}
+
+@keyframes afro-heartbeat {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	15% {
+		transform: scale(1.25) rotate(-10deg);
+	}
+	35% {
+		transform: scale(1.1) rotate(6deg);
+	}
+	55% {
+		transform: scale(1.2) rotate(-5deg);
+	}
+	70% {
+		transform: scale(1.05);
+	}
+}
+
+/* ============================================
+   RESPONSIVE: FILTERS AS DRAWER ON MOBILE
+   ============================================ */
+
+@media (max-width: 980px) {
+	.store__layout {
+		grid-template-columns: 1fr;
+		padding: 1.5rem;
+	}
+
+	.store__filterBtn {
+		display: inline-flex;
+	}
+
+	.filters {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		top: auto;
+		height: 80vh;
+		transform: translateY(110%);
+		transition: transform 0.28s ease;
+		z-index: 999;
+		border-radius: 20px 20px 0 0;
+		overflow: auto;
+	}
+
+	.filters.is-open {
+		transform: translateY(0);
+	}
+
+	.filters__close {
+		display: inline-flex;
+	}
+
+	.store__actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.search {
+		min-width: 100%;
+	}
+
+	.card__fav {
+		width: 3rem;
+		height: 3rem;
+		font-size: 1.5rem;
+		top: 0.75rem;
+		right: 0.75rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.store__top {
+		padding: 1.5rem;
+	}
+
+	.store__top h1 {
+		font-size: 2rem;
+	}
+
+	.store__layout {
+		padding: 1rem;
+	}
+
+	.filters__row {
+		grid-template-columns: 1fr;
+	}
+}

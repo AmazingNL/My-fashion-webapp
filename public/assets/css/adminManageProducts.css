@@ -1,0 +1,292 @@
+/** @format */
+@import url("/assets/css/main.css");
+
+/* Make admin pages feel like a dashboard, not the storefront */
+.admin-shell {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 24px;
+	position: relative;
+	z-index: 10;
+	isolation: isolate;
+}
+
+/* Put a solid “canvas” behind everything (kills ugly bleed-through) */
+.admin-shell::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	background: radial-gradient(
+			1200px 600px at 15% 10%,
+			rgba(244, 162, 97, 0.18),
+			transparent 60%
+		),
+		radial-gradient(
+			900px 500px at 85% 25%,
+			rgba(139, 30, 63, 0.12),
+			transparent 60%
+		),
+		#fbfaf9;
+}
+
+/* Base helpers */
+.muted {
+	color: var(--text-muted);
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Header */
+.admin-hero {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 18px 18px;
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.78);
+	backdrop-filter: blur(8px);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.admin-hero h1 {
+	margin: 0;
+	font-size: 1.4rem;
+	letter-spacing: 0.2px;
+}
+
+.admin-hero p {
+	margin: 6px 0 0;
+}
+
+/* Tools / filters */
+.admin-tools {
+	margin-top: 14px;
+	padding: 12px 14px;
+	border-radius: 16px;
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	background: rgba(255, 255, 255, 0.75);
+	backdrop-filter: blur(8px);
+}
+
+.admin-tools__row {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	align-items: end;
+}
+
+.admin-tools__field {
+	min-width: 240px;
+	flex: 1;
+}
+
+.admin-tools label {
+	font-weight: 800;
+	font-size: 0.9rem;
+}
+
+.admin-tools select {
+	width: 100%;
+	border: 1px solid rgba(0, 0, 0, 0.1);
+	border-radius: 12px;
+	padding: 10px 12px;
+	background: rgba(255, 255, 255, 0.9);
+}
+
+/* Grid */
+.admin-grid {
+	margin-top: 16px;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 14px;
+}
+
+/* Card */
+.admin-prod {
+	border-radius: 18px;
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	background: rgba(255, 255, 255, 0.82);
+	backdrop-filter: blur(8px);
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+/* Media */
+.admin-prod__media {
+	height: 160px;
+	background: linear-gradient(
+		135deg,
+		rgba(244, 162, 97, 0.18),
+		rgba(139, 30, 63, 0.1)
+	);
+	display: grid;
+	place-items: center;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.admin-prod__media img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.admin-prod__ph {
+	font-size: 2.6rem;
+	filter: saturate(1.1);
+}
+
+/* Body */
+.admin-prod__body {
+	padding: 14px 14px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.admin-prod__top {
+	display: flex;
+	align-items: start;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.admin-prod__top h3 {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.2;
+	max-width: 70%;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.admin-prod__meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	font-size: 0.92rem;
+}
+
+.pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-weight: 900;
+	font-size: 0.78rem;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	background: rgba(255, 255, 255, 0.75);
+}
+
+.statusPill {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-weight: 900;
+	font-size: 0.8rem;
+	border: 1px solid;
+}
+
+.statusPill--ok {
+	background: rgba(45, 106, 79, 0.12);
+	border-color: rgba(45, 106, 79, 0.25);
+	color: #1e5a3a;
+}
+
+.statusPill--warn {
+	background: rgba(212, 175, 55, 0.14);
+	border-color: rgba(212, 175, 55, 0.3);
+	color: #6b560f;
+}
+
+.statusPill--off {
+	background: rgba(193, 66, 54, 0.12);
+	border-color: rgba(193, 66, 54, 0.26);
+	color: #8b3a2e;
+}
+
+/* Actions */
+.admin-prod__actions {
+	margin-top: 2px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.btn--sm {
+	padding: 10px 12px;
+	font-size: 0.92rem;
+	border-radius: 12px;
+}
+
+/* Prevent product image bleed-through into the text area */
+.admin-prod__media {
+	position: relative;
+	overflow: hidden; /* hard clip the image to the media area */
+}
+
+.admin-prod__body {
+	background: #fff; /* fully opaque so text is always readable */
+	position: relative;
+	z-index: 1;
+}
+
+/* Optional: if you still want the “glass” look, keep it only on the header/cards around, not the text body */
+.admin-prod {
+	background: #fff; /* change from rgba(...) to solid */
+	backdrop-filter: none; /* optional, but avoids weird blending */
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+	.admin-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 900px) {
+	.admin-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.admin-nav__toggle {
+		display: inline-flex;
+	}
+	.admin-nav__items {
+		display: none;
+		width: 100%;
+	}
+	.admin-nav__items.active {
+		display: flex;
+	}
+	.admin-search input {
+		min-width: 180px;
+		width: 100%;
+	}
+}
+
+@media (max-width: 520px) {
+	.admin-grid {
+		grid-template-columns: 1fr;
+	}
+}

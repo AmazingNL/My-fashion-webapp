@@ -7,7 +7,10 @@ RUN apt-get update \
     && curl -sS https://getcomposer.org/installer -o composer-setup.php \
     && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
     && rm composer-setup.php \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && echo "upload_max_filesize=5M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size=8M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_execution_time=60" >> /usr/local/etc/php/conf.d/uploads.ini
 
 WORKDIR /app
 

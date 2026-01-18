@@ -1,9 +1,15 @@
 <?php
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+session_start();
+
 require __DIR__ . '/../vendor/autoload.php';
 
-use FastRoute\RouteController;
-use function FastRoute\simpleDispatcher;
+use \App\Core\Router;
 
-$dispatcher = simpileDispatcher(function (RouteController $routerController))
-    $routerController('GET', '/', ['App\Controllers\'])
+$router = new Router();
+$router->dispatch();
+
+?>

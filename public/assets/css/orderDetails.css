@@ -1,0 +1,145 @@
+@import url("/assets/css/main.css");
+
+.orderDetails {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 2rem;
+}
+
+.orderDetails__head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1.25rem;
+	flex-wrap: wrap;
+	margin-bottom: 1.25rem;
+}
+
+.orderDetails__sub {
+	color: var(--text-secondary);
+	margin-top: 0.35rem;
+}
+
+.orderDetails__actions {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.orderDetails__kv {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	margin-top: 0.75rem;
+}
+
+.orderDetails__kv span {
+	display: block;
+	color: var(--text-muted);
+	font-size: 0.85rem;
+	margin-bottom: 0.2rem;
+}
+
+.orderDetails__addr {
+	display: grid;
+	gap: 1rem;
+	margin-top: 0.75rem;
+}
+
+.orderDetails__label {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+	margin-bottom: 0.25rem;
+}
+
+.orderDetails__itemsCard {
+	margin-top: 1.5rem;
+	padding: 1.5rem;
+}
+
+.orderDetails__itemsTop {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 0.75rem;
+}
+
+.orderDetails__itemsList {
+	display: grid;
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+}
+
+.orderDetails__itemRow {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.85rem;
+	border: 1px solid var(--border-light);
+	border-radius: var(--radius-sm);
+	background: rgba(248, 243, 232, 0.35);
+}
+
+.orderDetails__itemName {
+	font-weight: 800;
+}
+
+.orderDetails__itemMeta {
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	margin-top: 0.2rem;
+}
+
+.orderDetails__itemSub {
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+.orderDetails__itemsFooter {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-top: 1px solid var(--border-light);
+	padding-top: 1rem;
+	margin-top: 1rem;
+}
+
+.orderDetails__itemRow {
+	align-items: center;
+}
+
+.orderDetails__thumb {
+	width: 56px;
+	height: 56px;
+	border-radius: 12px;
+	object-fit: cover;
+	border: 1px solid var(--border-light);
+	background: rgba(248, 243, 232, 0.6);
+	flex-shrink: 0;
+}
+
+.orderDetails__thumb--ph {
+	display: grid;
+	place-items: center;
+	font-size: 1.35rem;
+}
+
+.orderDetails__variant {
+	color: var(--text-muted);
+	font-weight: 700;
+	font-size: 0.95rem;
+	margin-left: 0.35rem;
+}
+
+@media (max-width: 900px) {
+	.orderDetails__kv {
+		grid-template-columns: 1fr;
+	}
+	.orderDetails__itemRow {
+		flex-direction: column;
+	}
+	.orderDetails__itemSub {
+		align-self: flex-end;
+	}
+}

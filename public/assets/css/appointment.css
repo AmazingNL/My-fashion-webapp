@@ -1,0 +1,178 @@
+/**
+ * Appointment pages - relies on main.css for buttons, container, etc.
+ *
+ * @format
+ */
+
+.appt-wrap {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 1rem;
+}
+
+.appt-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 1rem;
+	flex-wrap: wrap;
+	margin-bottom: 1rem;
+}
+
+.appt-title h1 {
+	margin: 0;
+	font-size: 1.6rem;
+}
+
+.appt-title p {
+	margin: 0.25rem 0 0;
+	opacity: 0.8;
+}
+
+.appt-grid {
+	display: grid;
+	grid-template-columns: repeat(12, 1fr);
+	gap: 1rem;
+}
+
+.appt-card {
+	grid-column: span 12;
+	border-radius: 14px;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	background: #fff;
+	padding: 1rem;
+}
+
+.appt-card h3 {
+	margin: 0 0 0.5rem;
+	font-size: 1.1rem;
+}
+
+.appt-meta {
+	display: grid;
+	grid-template-columns: repeat(12, 1fr);
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+}
+
+.appt-meta .item {
+	grid-column: span 12;
+	padding: 0.75rem;
+	border-radius: 12px;
+	background: rgba(0, 0, 0, 0.03);
+}
+
+@media (min-width: 800px) {
+	.appt-meta .item {
+		grid-column: span 4;
+	}
+	.appt-card {
+		grid-column: span 6;
+	}
+}
+
+.badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.25rem 0.6rem;
+	border-radius: 999px;
+	font-size: 0.85rem;
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	background: rgba(0, 0, 0, 0.03);
+}
+
+.badge[data-status="PENDING"] {
+	background: rgba(255, 193, 7, 0.12);
+}
+.badge[data-status="CONFIRMED"] {
+	background: rgba(25, 135, 84, 0.12);
+}
+.badge[data-status="CANCELLED"] {
+	background: rgba(220, 53, 69, 0.12);
+}
+.badge[data-status="COMPLETED"] {
+	background: rgba(13, 110, 253, 0.12);
+}
+
+.appt-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	margin-top: 0.9rem;
+}
+
+.appt-form {
+	display: grid;
+	gap: 0.75rem;
+	max-width: 680px;
+}
+
+.appt-form .row {
+	display: grid;
+	gap: 0.6rem;
+}
+
+@media (min-width: 700px) {
+	.appt-form .row.two {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+.appt-form label {
+	font-weight: 600;
+	opacity: 0.9;
+}
+
+.appt-form input,
+.appt-form select,
+.appt-form textarea {
+	width: 100%;
+	padding: 0.75rem;
+	border-radius: 12px;
+	border: 1px solid rgba(0, 0, 0, 0.14);
+	background: #fff;
+}
+
+.notice {
+	padding: 0.75rem;
+	border-radius: 12px;
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	background: rgba(0, 0, 0, 0.03);
+}
+
+.notice.error {
+	border-color: rgba(220, 53, 69, 0.35);
+	background: rgba(220, 53, 69, 0.08);
+}
+
+.notice.success {
+	border-color: rgba(25, 135, 84, 0.35);
+	background: rgba(25, 135, 84, 0.08);
+}
+
+.muted {
+	opacity: 0.75;
+}
+.small {
+	font-size: 0.9rem;
+}
+
+/* Appointment status – readable contrast */
+.appt-card .badge {
+	color: #2a1810;      /* dark text */
+	font-weight: 800;
+}
+
+.appt-card .badge[data-status="PENDING"] {
+	background: rgba(255, 193, 7, 0.25);
+}
+
+.appt-card .badge[data-status="BOOKED"],
+.appt-card .badge[data-status="CONFIRMED"] {
+	background: rgba(25, 135, 84, 0.25);
+}
+
+.appt-card .badge[data-status="CANCELLED"] {
+	background: rgba(220, 53, 69, 0.25);
+}

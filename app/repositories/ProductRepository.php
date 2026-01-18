@@ -1,0 +1,257 @@
+<?php
+
+namespace App\Repositories;
+
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Repositories\IProductRepository;
+use App\Core\RepositoryBase;
+
+class ProductRepository extends RepositoryBase implements IProductRepository
+{
+
+    /** @return Product[] */
+    public function getAllActive(): array
+    {
+        $sql = "SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute();
+
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        return array_map(fn($r) => $this->mapProduct($r), $rows);
+    }
+
+    public function findSimilarProducts(int $id, string $category, int $limit = 4): array
+    {
+        $tokens = $this->catTokens($category);
+
+        return $this->fetchProducts(
+            $this->buildCategorySql($tokens),
+            $this->buildCategoryParams($id, $tokens),
+            $limit
+        );
+    }
+
+
+
+    /** @return ProductVariant[] */
+    public function getVariantsByProductId(int $productId): array
+    {
+        $sql = "SELECT * FROM product_variants WHERE productId = :pid ORDER BY size, colour";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([':pid' => $productId]);
+
+        $productVariants = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        return array_map(fn($r) => $this->mapProductVariant($r), $productVariants);
+    }
+
+
+    public function getVariantById(int $variantId): ?ProductVariant
+    {
+        $sql = "SELECT * FROM product_variants WHERE variantId = :variantId";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([':variantId' => $variantId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+        return $this->mapProductVariant($row);
+    }
+
+    public function getProductById(int $id): ?Product
+    {
+        $sql = "SELECT * FROM products 
+            WHERE productId = :id 
+            AND isActive = 1";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([':id' => $id]);
+
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+        return $this->mapProduct($row);
+    }
+
+
+    public function save(Product $product): int
+    {
+        $sql = "INSERT INTO products
+                (productName, description, price, category, stock, image, createdAt, updatedAt, isActive)
+                VALUES (:productName, :description, :price, :category, :stock, :image, NOW(), NOW(), :isActive)";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([
+            ':productName' => $product->getName(),
+            ':description' => $product->getDescription(),
+            ':price' => $product->getPrice(),
+            ':category' => $product->getCategory(),
+            ':stock' => $product->getStock(),
+            ':image' => $product->getImage(),
+            ':isActive' => 1
+
+        ]);
+
+        return (int) $this->getConnection()->lastInsertId();
+    }
+
+    public function saveVariant(ProductVariant $variant): void
+    {
+        $sql = "INSERT INTO product_variants
+                (productId, size, colour, stockQuantity)
+                VALUES (:productId, :size, :colour, :stockQuantity)";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([
+            ':productId' => $variant->getProductId(),
+            ':size' => $variant->getSize(),
+            ':colour' => $variant->getColour(),
+            ':stockQuantity' => $variant->getStockQuantity()
+        ]);
+    }
+
+    public function update(Product $product): void
+    {
+        $sql = "UPDATE products 
+            SET productName = :productName,
+                description = :description,
+                price = :price,
+                category = :category,
+                stock = :stock,
+                image = :image,
+                updatedAt = NOW(),
+                isActive = :isActive
+            WHERE productId = :productId";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([
+            ':productName' => $product->getName(),
+            ':description' => $product->getDescription(),
+            ':price' => $product->getPrice(),
+            ':category' => $product->getCategory(),
+            ':stock' => $product->getStock(),
+            ':image' => $product->getImage(),
+            ':isActive' => 1,
+            ':productId' => (int) $product->getId(),
+        ]);
+    }
+
+    public function delete($id): void
+    {
+        // soft-delete is usually nicer for admin panels,
+        // but keeping your interface: we'll deactivate
+        $sql = "UPDATE products SET isActive = 0, updatedAt = NOW() WHERE productId = :id";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([':id' => (int) $id]);
+    }
+
+    public function updateVariant(ProductVariant $variant): void
+    {
+        if ($variant->getVariantId() === null) {
+            throw new \InvalidArgumentException("VariantId is required for update.");
+        }
+
+        $sql = "UPDATE product_variants
+            SET size = :size,
+                colour = :colour,
+                stockQuantity = :stockQuantity
+            WHERE variantId = :variantId";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([
+            ':size' => $variant->getSize(),
+            ':colour' => $variant->getColour(),
+            ':stockQuantity' => $variant->getStockQuantity(),
+            ':variantId' => (int) $variant->getVariantId(),
+        ]);
+    }
+    public function deleteVariant(int $variantId): void
+    {
+        $sql = "DELETE FROM product_variants WHERE variantId = :variantId";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([':variantId' => $variantId]);
+    }
+
+    ///// Private helper to map database row to Product model
+
+    private function mapProduct(array $r): Product
+    {
+        return new Product(
+            (int) $r['productId'],
+            (string) $r['productName'],
+            (string) $r['description'],
+            (float) $r['price'],
+            (string) $r['category'],
+            (int) $r['stock'],
+            (string) $r['image'],
+            $r['createdAt'] ?? null,
+            $r['updatedAt'] ?? null,
+            (bool) $r['isActive']
+        );
+    }
+
+    private function mapProductVariant(array $r): ProductVariant
+    {
+        return new ProductVariant(
+            (int) $r['variantId'],
+            (int) $r['productId'],
+            (string) $r['size'],
+            (string) $r['colour'],
+            (int) $r['stockQuantity']
+        );
+    }
+
+    private function catTokens(string $category): array
+    {
+        return array_values(array_filter(array_unique(
+            preg_split('/\s*,\s*/', strtolower($category))
+        )));
+    }
+
+    private function buildCategorySql(array $tokens): string
+    {
+        if (!$tokens)
+            return '';
+
+        return 'AND (' . implode(' OR ', array_map(
+            fn($i) => "CONCAT(',', REPLACE(LOWER(category),' ',''), ',') LIKE :t$i",
+            array_keys($tokens)
+        )) . ')';
+    }
+
+    private function buildCategoryParams(int $excludeId, array $tokens): array
+    {
+        $params = [':excludeId' => $excludeId];
+        foreach ($tokens as $i => $t) {
+            $params[":t$i"] = "%," . str_replace(' ', '', $t) . ",%";
+        }
+        return $params;
+    }
+
+    private function fetchProducts(string $filterSql, array $params, int $limit): array
+    {
+        $sql = "SELECT * FROM products
+            WHERE productId != :excludeId
+            AND isActive = 1
+            AND stock > 0
+            $filterSql
+            ORDER BY RAND()
+            LIMIT :limit";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        foreach ($params as $k => $v)
+            $stmt->bindValue($k, $v);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return array_map(
+            fn($r) => $this->mapProduct($r),
+            $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []
+        );
+    }
+
+
+}
