@@ -13,6 +13,18 @@ A boutique e-commerce and appointment-booking site for custom women’s fashion.
 ## Tech Stack
 - **Backend:** PHP (custom MVC), FastRoute
 - **Database:** MariaDB/MySQL (PDO)
+An e-commerce and booking platform for a custom women’s fashion boutique. Customers can browse products, add items to a cart, place orders, and book design appointments. Admins can manage products, orders, appointments, and user activity.
+
+## Features
+- Product catalog with variants (size/color) and detail pages
+- Shopping cart + checkout flow
+- Appointment booking with available slot lookup (JSON API)
+- Admin dashboard for products, orders, appointments, and activity logs
+- Session-based auth and CSRF protection
+
+## Tech Stack
+- **Backend:** PHP (custom MVC), FastRoute
+- **Database:** MariaDB/MySQL with PDO
 - **Frontend:** HTML, CSS, vanilla JavaScript
 - **Containerization:** Docker + docker-compose
 
@@ -64,11 +76,6 @@ composer install
 - **Admin:** `admin@nuellasignet.com` / `Admin123!` (seeded in `database/schema.sql`)
 - **Customer:** register a new account via `/showRegistrationForm`
 
-## API Endpoints (quick reference)
-- `GET /api/products/{id}` – product detail payload
-- `GET /api/appointments/slots` – appointment slots (filter by `?date=YYYY-MM-DD`)
-- `GET /api/orders` – order list (authenticated)
-
 ## Folder Structure
 ```
 .
@@ -91,14 +98,14 @@ composer install
 ```
 
 ## Design Choices
-- **Custom MVC** keeps routing, controllers, models, and views clear and easy to navigate.
-- **Service + Repository layers** isolate business logic from data access.
-- **Shared PDO connection** in `RepositoryBase` reduces connection overhead.
-- **Server-rendered views** keep pages fast and simple without extra front-end frameworks.
+- **Custom MVC**: Controllers, models, views, and routing are separated for clarity (`app/Controllers`, `app/models`, `app/Views`, `app/core/Router.php`).
+- **Service + Repository layers**: Business logic is kept in services, data access in repositories (`app/services`, `app/repositories`). This keeps controllers thin and easier to test.
+- **Shared PDO connection**: `app/core/RepositoryBase.php` manages a single shared database connection.
+- **Server-rendered views**: PHP templates in `app/Views` keep the UI simple and fast.
 
 ## Accessibility & GDPR Notes
-- **WCAG basics**: semantic HTML, labeled form inputs, and image alt text across views.
-- **GDPR basics**: minimal data collection, hashed passwords, and CSRF protection.
+- **WCAG basics**: Semantic HTML, labeled form inputs, and image alt text are used across views (see `app/Views`).
+- **GDPR basics**: Minimal user data is stored, passwords are hashed, and CSRF tokens are used (see `app/core/ControllerBase.php`).
 
 ## Database Export
 A full database export (schema + seed data) is included at:
