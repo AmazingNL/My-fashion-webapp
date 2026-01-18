@@ -156,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			showNotice(payload.message || "Cart updated", "ok");
 		} catch (err) {
-			// revert UI and tell user why it failed (usually stock limit)
+			// revert UI and tell user why it failed 
 			if (input) input.value = String(prevQty);
 			showNotice(err.message || "Could not update quantity", "bad");
 		}

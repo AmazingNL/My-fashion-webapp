@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const toast = (el, msg) => {
 		if (!el) return;
 
-		// hide the other toast (so they can't both show)
+		// hide the other toast 
 		const other = el === okBox ? errBox : okBox;
 		if (other) {
 			other.hidden = true;

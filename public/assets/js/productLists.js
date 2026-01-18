@@ -84,9 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	async function refreshFavState() {
-		// load favourites from server so hearts show correct state + badge updates
 		try {
-			const data = await api("/api/favourites/products"); // same endpoint used in favourites.js :contentReference[oaicite:3]{index=3}
+			const data = await api("/api/favourites/products"); 
 			const list = data.products || [];
 
 			favSet.clear();
@@ -297,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		filterPanel?.classList.remove("is-open");
 	});
 
-	// ✅ Heart click handler (THIS is what you were missing)
+	// Heart click handler 
 	grid?.addEventListener("click", async (e) => {
 		const btn = e.target.closest(".card__fav");
 		if (!btn) return;

@@ -1,7 +1,6 @@
 /** @format */
 
 (() => {
-	// prevent double-loading (if script is included twice)
 	if (window.__manageOrdersLoaded) return;
 	window.__manageOrdersLoaded = true;
 
@@ -75,7 +74,6 @@
 			return;
 		}
 
-		// ✅ IMPORTANT: don’t call API if status didn’t actually change
 		if (next === prev) return;
 
 		setLoading(orderId, true);

@@ -3,7 +3,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 	const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
-	// shared elements (may not exist on all pages)
+	// shared elements 
 	const dateInput = document.getElementById("apptDate");
 	const slotSelect = document.getElementById("slotId");
 	const slotHelp = document.getElementById("slotHelp");

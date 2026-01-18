@@ -10,11 +10,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!form) return;
 
-  // ✅ Hide alerts on initial load (prevents empty boxes showing)
   if (errBox) errBox.hidden = true;
   if (okBox) okBox.hidden = true;
 
-  // Helpers to update alert text without destroying its inner HTML (icon, markup, etc.)
+  // Helpers to update alert text without destroying its inner HTML 
   const setAlertText = (box, msg, fallback) => {
     if (!box) return;
     const textEl = box.querySelector(".af-alert__text") || box.querySelector("p") || box;
