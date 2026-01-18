@@ -2,15 +2,14 @@
 
 namespace App\Controllers;
 
-use App\Models\Product;
-use App\Services\ProductService;
+use App\Services\IProductService;
 use App\Core\ControllerBase;
 
 class ProductController extends ControllerBase
 {
-    private ProductService $productService;
+    private IProductService $productService;
 
-    public function __construct(ProductService $productService)
+    public function __construct(IProductService $productService)
     {
         $this->productService = $productService;
     }
@@ -39,7 +38,6 @@ class ProductController extends ControllerBase
     public function productDetails(int $id): void
     {
         // Simply render the HTML view - no data needed
-        // JavaScript will fetch the data from the API endpoint
         $this->render('Products/ProductDetails', [
             'title' => 'Product Details'
         ]);
@@ -53,43 +51,13 @@ class ProductController extends ControllerBase
     {
         try {
             $result = $this->productService->getProductDetails($productId);
-
-            // Check errors
-            if (!empty($result['errors']) || $result['product'] === null) {
-                $this->jsonResponse(['error' => 'Product not found'], 404);
-                return;
-            }
-
-            // Get similar products
-            $product = $result['product'];
-            $similarProducts = $this->productService->getSimilarProducts(
-                productId: $productId,
-                category: $product->getCategory(),
-                limit: 4
-            );
-
-            // Map response
+            $product = $this->requireProductOr404($result);
             $response = $this->mapProductResponse($result);
-
-            // Add similar products to response
-            $response['similarProducts'] = array_map(fn($p) => [
-                'productId' => $p->getId(),
-                'productName' => $p->getName(),
-                'price' => $p->getPrice(),
-                'category' => $p->getCategory(),
-                'image' => $p->getImage() ?: '/assets/images/placeholder.jpg',
-            ], $similarProducts);
-
+            $response['similarProducts'] = $this->similarProductsPayload($productId, $product->getCategory());
             $this->jsonResponse($response, 200);
-
         } catch (\Throwable $e) {
-            error_log($e); // or error_log($e->getMessage());
-            $this->jsonResponse([
-                'error' => $e->getMessage(),
-                'type' => get_class($e),
-            ], 500);
+            $this->handleApiException($e);
         }
-
     }
 
     /**
@@ -115,6 +83,47 @@ class ProductController extends ControllerBase
             ], $variants),
         ];
     }
+
+    private function requireProductOr404(array $result)
+    {
+        $product = $result['product'] ?? null;
+        $errors = $result['errors'] ?? [];
+
+        if ($product === null || !empty($errors)) {
+            $this->jsonResponse(['error' => 'Product not found'], 404);
+            exit; // or return; if your jsonResponse() already stops execution
+        }
+        return $product;
+    }
+
+    private function similarProductsPayload(int $productId, string $category): array
+    {
+        $similar = $this->productService->getSimilarProducts(
+            productId: $productId,
+            category: $category,
+            limit: 4
+        );
+
+        return array_map([$this, 'mapSimilarProduct'], $similar);
+    }
+
+    private function mapSimilarProduct($p): array
+    {
+        return [
+            'productId' => $p->getId(),
+            'productName' => $p->getName(),
+            'price' => $p->getPrice(),
+            'category' => $p->getCategory(),
+            'image' => $p->getImage() ?: '/assets/images/placeholder.jpg',
+        ];
+    }
+
+    private function handleApiException(\Throwable $e): void
+    {
+        error_log((string) $e);
+        $this->jsonResponse(['error' => 'Server error'], 500);
+    }
+
 
 }
 

@@ -8,23 +8,23 @@ use App\Core\ControllerBase;
 use App\Core\Middleware;
 use App\Models\OrderStatus;
 use App\Models\PaymentStatus;
-use App\Services\CartService;
-use App\Services\OrderService;
-use App\Services\OrderItemService;
-use App\Services\ActivityLogService;
+use App\Services\ICartService;
+use App\Services\IOrderService;
+use App\Services\IOrderItemService;
+use App\Services\IActivityLogService;
 
 class CheckoutController extends ControllerBase
 {
-    private CartService $cartService;
-    private OrderService $orderService;
-    private OrderItemService $orderItemService;
-    private ActivityLogService $logService;
+    private ICartService $cartService;
+    private IOrderService $orderService;
+    private IOrderItemService $orderItemService;
+    private IActivityLogService $logService;
 
     public function __construct(
-        CartService $cartService,
-        OrderService $orderService,
-        OrderItemService $orderItemService,
-        ActivityLogService $logService
+        ICartService $cartService,
+        IOrderService $orderService,
+        IOrderItemService $orderItemService,
+        IActivityLogService $logService
     ) {
         $this->cartService = $cartService;
         $this->orderService = $orderService;
@@ -46,7 +46,7 @@ class CheckoutController extends ControllerBase
             'title' => 'Checkout',
             'cartItems' => $this->cartService->getCartItems(),
             'total' => $this->cartService->getTotalPrice()
-        ],);
+        ], );
     }
 
     // POST /checkout/place
@@ -54,97 +54,17 @@ class CheckoutController extends ControllerBase
     {
         Middleware::requireAuth();
         Middleware::requireCustomer();
-
         $this->validateCsrf();
 
-        $userId = $this->sessionUserId();
-        if (!$userId) {
-            $this->jsonResponse(['error' => 'login_required'], 401);
-        }
+        $userId = $this->requireUser();
+        $this->ensureCartNotEmpty($userId);
 
-        if ($this->cartService->isEmpty()) {
-            $this->logService->log(
-                $userId,
-                'Checkout Failed',
-                'checkout',
-                null,
-                'Cart is empty.'
-            );
-            $this->jsonResponse(['error' => 'Cart is empty'], 400);
-        }
+        $data = $this->checkoutInput();
+        $this->validateCartOrFail($userId);
 
-        $shipping = trim((string)$this->input('shippingAddress', ''));
-        $billing  = trim((string)$this->input('billingAddress', ''));
-        $paymentMethod = trim((string)$this->input('paymentMethod', 'credit_card'));
-
-        if ($shipping === '') {
-            $this->logService->log(
-                $userId,
-                'Checkout Failed',
-                'checkout',
-                null,
-                'Missing shipping address.'
-            );
-            $this->jsonResponse(['error' => 'Shipping address is required'], 400);
-        }
-
-        // Stock / cart validation from your CartService :contentReference[oaicite:1]{index=1}
-        $errors = $this->cartService->validateCart();
-        if (!empty($errors)) {
-            $this->logService->log(
-                $userId,
-                'Checkout Failed',
-                'checkout',
-                null,
-                'Cart validation failed: ' . implode(' | ', $errors)
-            );
-            $this->jsonResponse(['error' => implode(' | ', $errors)], 400);
-        }
-
-        try {
-            // Use enums in code, service converts to DB string as needed
-            $result = $this->orderService->placeOrder(
-                (int)$userId,
-                $shipping,
-                $billing !== '' ? $billing : null,
-                $paymentMethod,
-                OrderStatus::PENDING,
-                PaymentStatus::PENDING
-            );
-
-            $orderId = (int)($result['orderId'] ?? 0);
-            $totalAmount = (float)($result['totalAmount'] ?? 0);
-
-            // If OrderService already clears cart, this is still safe
-            $this->cartService->clearCart();
-
-            $this->logService->log(
-                $userId,
-                'Order Placed',
-                'order',
-                $orderId ?: null,
-                'Order placed. Total: €' . number_format($totalAmount, 2, '.', '')
-            );
-
-            $this->jsonResponse([
-                'message' => 'Order placed successfully',
-                'orderId' => $orderId,
-                'totalAmount' => $totalAmount,
-                'redirect' => $orderId ? "/orders/{$orderId}" : "/orders",
-            ], 201);
-
-        } catch (\Throwable $e) {
-            $this->logService->log(
-                $userId,
-                'Checkout Failed',
-                'checkout',
-                null,
-                'Exception: ' . $e->getMessage()
-            );
-
-            $this->jsonResponse(['error' => $e->getMessage()], 400);
-        }
+        $this->placeOrderAndRespond($userId, $data);
     }
+
 
     // GET /checkout/confirmation/{id} (optional)
     public function confirmation(int $orderId): void
@@ -153,16 +73,17 @@ class CheckoutController extends ControllerBase
         Middleware::requireCustomer();
 
         $userId = $this->sessionUserId();
-        if (!$userId) $this->redirect('/');
+        if (!$userId)
+            $this->redirect('/');
 
-        $order = $this->orderService->getMyOrder((int)$userId, (int)$orderId);
-        $items = $this->orderItemService->getByOrderId((int)$orderId);
+        $order = $this->orderService->getMyOrder((int) $userId, (int) $orderId);
+        $items = $this->orderItemService->getByOrderId((int) $orderId);
 
         $this->logService->log(
             $userId,
             'Order Confirmation Viewed',
             'order',
-            (int)$orderId,
+            (int) $orderId,
             'User viewed confirmation page.'
         );
 
@@ -173,9 +94,84 @@ class CheckoutController extends ControllerBase
         ]);
     }
 
+
+
+    // Private and Helper Methods //
+    private function requireUser(): int
+    {
+        $id = (int) ($this->sessionUserId() ?? 0);
+        if ($id <= 0) {
+            $this->jsonResponse(['error' => 'login_required'], 401);
+            exit;
+        }
+        return $id;
+    }
+
+    private function ensureCartNotEmpty(int $userId): void
+    {
+        if (!$this->cartService->isEmpty())
+            return;
+
+        $this->logService->log($userId, 'Checkout Failed', 'checkout', null, 'Cart is empty.');
+        $this->jsonResponse(['error' => 'Cart is empty'], 400);
+        exit;
+    }
+
+    private function checkoutInput(): array
+    {
+        return [
+            'shipping' => trim((string) $this->input('shippingAddress', '')),
+            'billing' => trim((string) $this->input('billingAddress', '')) ?: null,
+            'payment' => trim((string) $this->input('paymentMethod', 'credit_card')),
+        ];
+    }
+
+    private function validateCartOrFail(int $userId): void
+    {
+        $errors = $this->cartService->validateCart();
+        if (empty($errors))
+            return;
+
+        $this->logService->log(
+            $userId,
+            'Checkout Failed',
+            'checkout',
+            null,
+            implode(' | ', $errors)
+        );
+        $this->jsonResponse(['error' => implode(' | ', $errors)], 400);
+        exit;
+    }
+
+    private function placeOrderAndRespond(int $userId, array $data): void
+    {
+        try {
+            $res = $this->orderService->placeOrder(
+                $userId,
+                $data['shipping'],
+                $data['billing'],
+                $data['payment'],
+                OrderStatus::PENDING,
+                PaymentStatus::PENDING
+            );
+
+            $this->cartService->clearCart();
+
+            $this->jsonResponse([
+                'message' => 'Order placed successfully',
+                'orderId' => (int) $res['orderId'],
+                'totalAmount' => (float) $res['totalAmount'],
+                'redirect' => "/orders/{$res['orderId']}",
+            ], 201);
+        } catch (\Throwable $e) {
+            $this->logService->log($userId, 'Checkout Failed', 'checkout', null, $e->getMessage());
+            $this->jsonResponse(['error' => 'Checkout failed'], 400);
+        }
+    }
+
     private function sessionUserId(): ?int
     {
         $this->ensureSession();
-        return isset($_SESSION['userId']) ? (int)$_SESSION['userId'] : null;
+        return isset($_SESSION['userId']) ? (int) $_SESSION['userId'] : null;
     }
 }

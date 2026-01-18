@@ -13,7 +13,8 @@ final class AppointmentService implements IAppointmentService
     public function __construct(
         private IAppointmentRepository $appointments,
         private IAppointmentSlotRepository $slots
-    ) {}
+    ) {
+    }
 
     public function autoCancelPastAppointments(): int
     {
@@ -24,6 +25,11 @@ final class AppointmentService implements IAppointmentService
     {
         $this->autoCancelPastAppointments();
         return $this->appointments->findByUserId($userId);
+    }
+
+    public function countPending(): int
+    {
+        return $this->appointments->countByStatus(AppointmentStatus::PENDING);
     }
 
     public function getAvailableSlotsByDate(string $date): array
@@ -68,15 +74,15 @@ final class AppointmentService implements IAppointmentService
     public function updateAppointmentSlot(int $userId, int $appointmentId, int $newSlotId): void
     {
         $current = $this->appointments->findById($appointmentId);
-        if (!$current || (int)$current['userId'] !== $userId) {
+        if (!$current || (int) $current['userId'] !== $userId) {
             throw new \RuntimeException("Appointment not found.");
         }
 
-        if (in_array($current['status'], ['CANCELLED','COMPLETED'], true)) {
+        if (in_array($current['status'], ['CANCELLED', 'COMPLETED'], true)) {
             throw new \RuntimeException("You can't change a cancelled/completed appointment.");
         }
 
-        $oldSlotId = (int)$current['slotId'];
+        $oldSlotId = (int) $current['slotId'];
 
         $this->slots->beginTransaction();
         try {
@@ -104,7 +110,7 @@ final class AppointmentService implements IAppointmentService
     public function updateAppointmentDetails(int $userId, int $appointmentId, ?string $designType, ?string $notes): void
     {
         $current = $this->appointments->findById($appointmentId);
-        if (!$current || (int)$current['userId'] !== $userId) {
+        if (!$current || (int) $current['userId'] !== $userId) {
             throw new \RuntimeException("Appointment not found.");
         }
         $this->appointments->updateDetails($appointmentId, $designType, $notes);
@@ -113,15 +119,15 @@ final class AppointmentService implements IAppointmentService
     public function cancel(int $userId, int $appointmentId): void
     {
         $current = $this->appointments->findById($appointmentId);
-        if (!$current || (int)$current['userId'] !== $userId) {
+        if (!$current || (int) $current['userId'] !== $userId) {
             throw new \RuntimeException("Appointment not found.");
         }
 
-        if (in_array($current['status'], ['CANCELLED','COMPLETED'], true)) {
+        if (in_array($current['status'], ['CANCELLED', 'COMPLETED'], true)) {
             return;
         }
 
-        $slotId = (int)$current['slotId'];
+        $slotId = (int) $current['slotId'];
 
         $this->slots->beginTransaction();
         try {
@@ -142,7 +148,6 @@ final class AppointmentService implements IAppointmentService
 
     public function adminAddSlot(string $date, string $startTime, string $endTime): int
     {
-        // relies on your DB unique index (appointmentDate + startTime) to prevent duplicates
         $slot = new AppointmentSlot(null, $date, $startTime, $endTime, true, null);
         return $this->slots->create($slot);
     }

@@ -9,15 +9,12 @@ use App\Repositories\IActivityLogRepository;
 
 class ActivityLogService implements IActivityLogService
 {
-    private IActivityLogRepository $logRepository;
-
-    public function __construct(IActivityLogRepository $logRepository)
-    {
-        $this->logRepository = $logRepository;
-    }
+    public function __construct(
+        private readonly IActivityLogRepository $repo
+    ) {}
 
     /**
-     * Log an activity
+     * Record a log entry.
      */
     public function log(
         ?int $userId,
@@ -25,9 +22,9 @@ class ActivityLogService implements IActivityLogService
         ?string $entityType = null,
         ?int $entityId = null,
         ?string $details = null
-    ): void {
-        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
-        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+    ): ?int {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
 
         $log = new ActivityLog(
             null,
@@ -36,88 +33,95 @@ class ActivityLogService implements IActivityLogService
             $entityType,
             $entityId,
             $details,
-            $ipAddress,
-            $userAgent
+            $ip,
+            $ua,
+            null
         );
 
-        $this->logRepository->create($log);
+        return $this->repo->create($log);
     }
 
     /**
-     * Get all logs with pagination
+     * Admin list with filters + pagination.
      */
-    public function getAllLogs(int $limit = 100, int $offset = 0): array
-    {
-        return $this->logRepository->getAll($limit, $offset);
+    public function getLogs(
+        int $limit = 50,
+        int $offset = 0,
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $dateFrom = null, 
+        ?string $dateTo = null
+    ): array {
+        return $this->repo->getFiltered($userId, $action, $dateFrom, $dateTo, $limit, $offset);
+    }
+
+    public function countLogs(
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): int {
+        return $this->repo->countFiltered($userId, $action, $dateFrom, $dateTo);
     }
 
     /**
-     * Get logs by user
+     * Delete logs older than X days.
      */
-    public function getUserLogs(int $userId, int $limit = 100): array
+    public function purgeOlderThan(int $days): int
     {
-        return $this->logRepository->getByUser($userId, $limit);
+        $days = max(1, $days);
+        return $this->repo->deleteOlderThan($days);
     }
 
     /**
-     * Get logs by action
+     * Clear everything (admin-only).
      */
-    public function getActionLogs(string $action, int $limit = 100): array
+    public function clearAll(): int
     {
-        return $this->logRepository->getByAction($action, $limit);
+        return $this->repo->deleteAll();
     }
 
     /**
-     * Clean up old logs
+     * Export filtered logs to a CSV file and return filepath.
      */
-    public function cleanupOldLogs(int $days = 90): int
-    {
-        return $this->logRepository->deleteOlderThan($days);
-    }
+    public function exportLogsToFile(
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): string {
+        $rows = $this->repo->getFiltered($userId, $action, $dateFrom, $dateTo, 5000, 0);
 
-    /**
-     * Export logs to file for admin
-     */
-    public function exportLogsToFile(string $filename): string
-    {
-        if ($filename === null) {
-            $filename = 'activity_logs_' . date('Y-m-d_His') . '.txt';
+        $dir = sys_get_temp_dir();
+        $filename = 'activity_logs_' . date('Ymd_His') . '.csv';
+        $path = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
+
+        $fp = fopen($path, 'w');
+        if (!$fp) {
+            throw new \RuntimeException('Could not create export file');
         }
 
-        $logDir = __DIR__ . '/../../storage/logs';
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
+        // Header
+        fputcsv($fp, [
+            'logId', 'createdAt', 'userId', 'userEmail',
+            'action', 'entityType', 'entityId', 'details', 'ipAddress'
+        ]);
+
+        foreach ($rows as $r) {
+            fputcsv($fp, [
+                $r['logId'] ?? '',
+                $r['createdAt'] ?? '',
+                $r['userId'] ?? '',
+                $r['email'] ?? '',
+                $r['action'] ?? '',
+                $r['entityType'] ?? '',
+                $r['entityId'] ?? '',
+                $r['details'] ?? '',
+                $r['ipAddress'] ?? '',
+            ]);
         }
 
-        $filepath = $logDir . '/' . $filename;
-        $logs = $this->getAllLogs(1000); // Get last 1000 logs
-
-        $content = "Activity Logs Export - " . date('Y-m-d H:i:s') . "\n";
-        $content .= str_repeat("=", 80) . "\n\n";
-
-        foreach ($logs as $log) {
-            $content .= "[{$log['createdAt']}] ";
-            $content .= "User: " . ($log['email'] ?? 'N/A') . " ";
-            $content .= "({$log['firstName']} {$log['lastName']}) | ";
-            $content .= "Action: {$log['action']}";
-            
-            if ($log['entityType']) {
-                $content .= " | Entity: {$log['entityType']}";
-                if ($log['entityId']) {
-                    $content .= " ID:{$log['entityId']}";
-                }
-            }
-            
-            if ($log['details']) {
-                $content .= " | Details: {$log['details']}";
-            }
-            
-            $content .= " | IP: {$log['ipAddress']}";
-            $content .= "\n";
-        }
-
-        file_put_contents($filepath, $content);
-
-        return $filepath;
+        fclose($fp);
+        return $path;
     }
 }

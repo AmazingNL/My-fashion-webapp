@@ -80,7 +80,7 @@ class UserService extends RepositoryBase implements IUserService
         }
 
         $user = $this->userRepository->findByEmail($email);
-        if (empty($user)) {                 
+        if (empty($user)) {
             return null;
         }
 
@@ -115,6 +115,16 @@ class UserService extends RepositoryBase implements IUserService
             return false;
         }
     }
+
+    public function updateUserStatus(int $userId, bool $isActive): bool
+    {
+        try {
+            return $this->userRepository->updateUserStatus($userId, $isActive);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
 
     public function changeUserPassword($id, $newPassword): bool
     {

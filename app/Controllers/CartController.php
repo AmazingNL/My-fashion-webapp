@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\ControllerBase;
-use App\Services\CartService;
-use App\Services\ActivityLogService;
+use App\Services\ICartService;
+use App\Services\IActivityLogService;
 use Exception;
 
 class CartController extends ControllerBase
 {
-    private CartService $cartService;
-    private ActivityLogService $logService;
+    private ICartService $cartService;
+    private IActivityLogService $logService;
 
-    public function __construct(CartService $cartService, ActivityLogService $logService)
+    public function __construct(ICartService $cartService, IActivityLogService $logService)
     {
         $this->cartService = $cartService;
         $this->logService  = $logService;

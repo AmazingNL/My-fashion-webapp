@@ -16,6 +16,15 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
             ->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    public function countByStatus(AppointmentStatus $status): int
+    {
+        $stmt = $this->getConnection()->prepare(
+            "SELECT COUNT(*) FROM appointments WHERE status = :status"
+        );
+        $stmt->execute([':status' => $status->value]);
+        return (int) $stmt->fetchColumn();
+    }
+
     public function getAllWithSlot(): array
     {
         $sql = "
@@ -80,14 +89,14 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
         ";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
-            ':userId'     => $appointment->getUserId(),
-            ':slotId'     => $appointment->getSlotId(),
+            ':userId' => $appointment->getUserId(),
+            ':slotId' => $appointment->getSlotId(),
             ':designType' => $appointment->getDesignType(),
-            ':notes'      => $appointment->getNotes(),
-            ':status'     => $appointment->getStatus()->value,
+            ':notes' => $appointment->getNotes(),
+            ':status' => $appointment->getStatus()->value,
         ]);
 
-        return (int)$this->getConnection()->lastInsertId();
+        return (int) $this->getConnection()->lastInsertId();
     }
 
     public function updateSlot(int $appointmentId, int $slotId): void
@@ -149,9 +158,9 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
     private function mapToAppointment(array $row): Appointment
     {
         return new Appointment(
-            (int)$row['appointmentId'],
-            (int)$row['userId'],
-            (int)$row['slotId'],
+            (int) $row['appointmentId'],
+            (int) $row['userId'],
+            (int) $row['slotId'],
             $row['designType'] ?? null,
             $row['notes'] ?? null,
             AppointmentStatus::fromDb($row['status'] ?? null),

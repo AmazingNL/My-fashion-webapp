@@ -882,24 +882,34 @@ select:focus-visible {
 	transition: transform 0.3s ease;
 }
 
+.navbar__icon {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+
 .navbar__cart:hover {
 	transform: scale(1.15);
 }
 
 .navbar__cart-count {
 	position: absolute;
-	top: 0;
-	right: 0;
+	top: -6px;
+	right: -12px;   /* pushes badge away from text */
 	background: var(--afro-vibrant);
 	color: white;
 	font-size: 0.65rem;
 	font-weight: 700;
 	padding: 3px 6px;
-	border-radius: 10px;
+	border-radius: 999px;
 	min-width: 18px;
+	line-height: 1;
 	text-align: center;
 	box-shadow: 0 2px 8px rgba(139, 30, 63, 0.4);
+	pointer-events: none;
 }
+
 
 .navbar__btn {
 	padding: 0.65rem 1.5rem;
@@ -1033,7 +1043,6 @@ select:focus-visible {
 .main-content {
 	min-height: calc(100vh - 400px);
 	position: relative;
-	z-index: 1;
 }
 
 /* ============================================
@@ -1478,3 +1487,4 @@ select:focus-visible {
 		height: 38px;
 	}
 }
+

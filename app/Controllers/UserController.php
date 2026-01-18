@@ -3,17 +3,17 @@
 namespace App\Controllers;
 
 use App\models\User;
-use App\services\UserService;
+use App\services\IUserService;
 use App\Core\ControllerBase;
-use App\services\ActivityLogService;
+use App\services\IActivityLogService;
 
-class UserController extends ControllerBase 
+class UserController extends ControllerBase
 {
-    private UserService $userService;
+    private IUserService $userService;
 
-    private ActivityLogService $activityLogService;
+    private IActivityLogService $activityLogService;
 
-    public function __construct(UserService $userService, ActivityLogService $activityLogService)
+    public function __construct(IUserService $userService, IActivityLogService $activityLogService)
     {
         $this->userService = $userService;
         $this->activityLogService = $activityLogService;
@@ -22,59 +22,26 @@ class UserController extends ControllerBase
     public function showRegistrationForm(): void
     {
         // Render registration form view
-        $this->render('Users/showRegistrationForm', ['title' => 'Register']);
+        $this->render(
+            'Users/showRegistrationForm',
+            ['title' => 'Register'],
+            'main'
+        );
     }
 
     public function registerUser(): void
     {
-        $user = new User(
-            null,
-            trim($this->input('firstName', '')),
-            trim($this->input('lastName', '')),
-            trim($this->input('email', '')),
-            '', // password hashed in service
-            trim($this->input('phone', '')),
-            'customer',
-            null,
-            null
-        );
-
-        $password = (string) $this->input('password', '');
-
         try {
-            $errors = $this->userService->createUser($user, $password);
-
-            if (!empty($errors)) {
-                // Service validation errors → frontend fetch
-                $this->jsonResponse(
-                    ['errors' => $errors],
-                    422
-                );
-                return;
-            }
-
-            // Success → frontend fetch
-            $this->jsonResponse(
-                ['message' => 'User registered successfully.'],
-                201
-            );
-            $this->activityLogService->log(
-            $user->getUserId(),
-                'Registered new user: ' . $user->getEmail(),
-                'user_registration',
-                null,
-                'A new user has been registered.'
-            );
+            [$user, $password] = $this->registrationInput();
+            $this->createUserOrFail($user, $password);
+            $this->logRegistration($user);
+            $this->jsonResponse(['message' => 'User registered successfully.'], 201);
             $this->redirect('/');
         } catch (\Throwable $e) {
-            // Safety net (DB down, unexpected error, etc.)
-            $this->jsonResponse(
-                ['errors' => [$e->getMessage()]],
-                500
-            );
+            $this->handleRegistrationError($e);
         }
-
     }
+
 
     public function getUserProfile($id): ?User
     {
@@ -83,6 +50,59 @@ class UserController extends ControllerBase
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    public function aboutUs()
+    {
+        $this->render('/About/Index', ['title' => 'About Us'], 'main');
+    }
+
+
+    // Private and Helper Functions //
+    private function registrationInput(): array
+    {
+        return [
+            new User(
+                null,
+                trim($this->input('firstName', '')),
+                trim($this->input('lastName', '')),
+                trim($this->input('email', '')),
+                '',
+                trim($this->input('phone', '')),
+                'customer',
+                null,
+                null
+            ),
+            (string) $this->input('password', '')
+        ];
+    }
+
+    private function createUserOrFail(User $user, string $password): void
+    {
+        $errors = $this->userService->createUser($user, $password);
+
+        if (empty($errors))
+            return;
+
+        $this->jsonResponse(['errors' => $errors], 422);
+        exit;
+    }
+
+    private function logRegistration(User $user): void
+    {
+        $this->activityLogService->log(
+            $user->getUserId(),
+            'Registered new user: ' . $user->getEmail(),
+            'user_registration',
+            null,
+            'A new user has been registered.'
+        );
+    }
+
+    private function handleRegistrationError(\Throwable $e): void
+    {
+        error_log((string) $e);
+        $this->jsonResponse(['errors' => ['Registration failed']], 500);
     }
 
 

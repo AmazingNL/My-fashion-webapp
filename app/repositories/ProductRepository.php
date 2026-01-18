@@ -21,26 +21,18 @@ class ProductRepository extends RepositoryBase implements IProductRepository
         return array_map(fn($r) => $this->mapProduct($r), $rows);
     }
 
-    public function findSimilarProducts(int $excludeProductId, string $category, int $limit = 4): array
+    public function findSimilarProducts(int $id, string $category, int $limit = 4): array
     {
-        $sql = "SELECT * FROM products 
-            WHERE category = :category 
-            AND productId != :excludeId
-            AND isActive = 1
-            AND stock > 0
-            ORDER BY RAND()
-            LIMIT :limit";
+        $tokens = $this->catTokens($category);
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->bindValue(':category', $category, \PDO::PARAM_STR);
-        $stmt->bindValue(':excludeId', $excludeProductId, \PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
-        $stmt->execute();
-
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        return array_map(fn($r) => $this->mapProduct($r), $rows);
+        return $this->fetchProducts(
+            $this->buildCategorySql($tokens),
+            $this->buildCategoryParams($id, $tokens),
+            $limit
+        );
     }
+
+
 
     /** @return ProductVariant[] */
     public function getVariantsByProductId(int $productId): array
@@ -123,32 +115,65 @@ class ProductRepository extends RepositoryBase implements IProductRepository
 
     public function update(Product $product): void
     {
-        // Implementation for updating an existing product
-        $sql = "UPDATE products SET productName = :productName, description = :description, price = :price, category = :category,
-        stock = :stock, image = :image, updatedAt = NOW(), isActive = :isActive WHERE id = :id";
+        $sql = "UPDATE products 
+            SET productName = :productName,
+                description = :description,
+                price = :price,
+                category = :category,
+                stock = :stock,
+                image = :image,
+                updatedAt = NOW(),
+                isActive = :isActive
+            WHERE productId = :productId";
+
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
             ':productName' => $product->getName(),
             ':description' => $product->getDescription(),
             ':price' => $product->getPrice(),
             ':category' => $product->getCategory(),
-            ':image' => $product->getImage(),
             ':stock' => $product->getStock(),
-            ':isActive' => true,
-            ':updatedAt' => date('Y-m-d H:i:s'),
-            ':id' => $product->getId()
+            ':image' => $product->getImage(),
+            ':isActive' => 1,
+            ':productId' => (int) $product->getId(),
         ]);
-
     }
 
     public function delete($id): void
     {
-        // Implementation for deleting a product by ID
-        $sql = "DELETE FROM products WHERE id = :id";
+        // soft-delete is usually nicer for admin panels,
+        // but keeping your interface: we'll deactivate
+        $sql = "UPDATE products SET isActive = 0, updatedAt = NOW() WHERE productId = :id";
         $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':id' => $id]);
+        $stmt->execute([':id' => (int) $id]);
     }
 
+    public function updateVariant(ProductVariant $variant): void
+    {
+        if ($variant->getVariantId() === null) {
+            throw new \InvalidArgumentException("VariantId is required for update.");
+        }
+
+        $sql = "UPDATE product_variants
+            SET size = :size,
+                colour = :colour,
+                stockQuantity = :stockQuantity
+            WHERE variantId = :variantId";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([
+            ':size' => $variant->getSize(),
+            ':colour' => $variant->getColour(),
+            ':stockQuantity' => $variant->getStockQuantity(),
+            ':variantId' => (int) $variant->getVariantId(),
+        ]);
+    }
+    public function deleteVariant(int $variantId): void
+    {
+        $sql = "DELETE FROM product_variants WHERE variantId = :variantId";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([':variantId' => $variantId]);
+    }
 
     ///// Private helper to map database row to Product model
 
@@ -178,5 +203,55 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             (int) $r['stockQuantity']
         );
     }
+
+    private function catTokens(string $category): array
+    {
+        return array_values(array_filter(array_unique(
+            preg_split('/\s*,\s*/', strtolower($category))
+        )));
+    }
+
+    private function buildCategorySql(array $tokens): string
+    {
+        if (!$tokens)
+            return '';
+
+        return 'AND (' . implode(' OR ', array_map(
+            fn($i) => "CONCAT(',', REPLACE(LOWER(category),' ',''), ',') LIKE :t$i",
+            array_keys($tokens)
+        )) . ')';
+    }
+
+    private function buildCategoryParams(int $excludeId, array $tokens): array
+    {
+        $params = [':excludeId' => $excludeId];
+        foreach ($tokens as $i => $t) {
+            $params[":t$i"] = "%," . str_replace(' ', '', $t) . ",%";
+        }
+        return $params;
+    }
+
+    private function fetchProducts(string $filterSql, array $params, int $limit): array
+    {
+        $sql = "SELECT * FROM products
+            WHERE productId != :excludeId
+            AND isActive = 1
+            AND stock > 0
+            $filterSql
+            ORDER BY RAND()
+            LIMIT :limit";
+
+        $stmt = $this->getConnection()->prepare($sql);
+        foreach ($params as $k => $v)
+            $stmt->bindValue($k, $v);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return array_map(
+            fn($r) => $this->mapProduct($r),
+            $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []
+        );
+    }
+
 
 }

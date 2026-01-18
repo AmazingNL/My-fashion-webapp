@@ -4,7 +4,7 @@ namespace App\Core;
 
 abstract class ControllerBase
 {
-    // Base controller code here
+    // Base controller code
 
     protected function render(string $view, $data = [], $layout = 'main'): void
     {
@@ -27,7 +27,7 @@ abstract class ControllerBase
     {
         if (headers_sent($file, $line)) {
             error_log("Redirect blocked: headers already sent in $file:$line");
-            return; // or throw
+            return; 
         }
         header("Location: $url");
         exit;
@@ -37,7 +37,7 @@ abstract class ControllerBase
     {
         if (headers_sent($file, $line)) {
             error_log("JSON blocked: headers already sent in $file:$line");
-            // still echo JSON without headers, or just exit
+            // Echo JSON without headers, or just exit
         }
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
@@ -71,24 +71,27 @@ abstract class ControllerBase
         return $_SESSION['csrf'];
     }
 
-    protected function validateCsrf(): void
-    {
-        $this->ensureSession();
+protected function validateCsrf(): void
+{
+    $this->ensureSession();
 
-        $token =
-            $_POST['csrf']
-            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
-            ?? '';
+    $token = $_POST['csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 
-        if (
-            empty($_SESSION['csrf']) ||
-            empty($token) ||
-            !hash_equals($_SESSION['csrf'], $token)
-        ) {
-            http_response_code(403);
-            exit('Invalid CSRF token');
+    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+    $wantsJson = str_contains($accept, 'application/json');
+
+    if (empty($_SESSION['csrf']) || empty($token) || !hash_equals($_SESSION['csrf'], $token)) {
+        if ($wantsJson) {
+            $this->jsonResponse([
+                'errors' => ['Your session expired. Please refresh the page and try again.']
+            ], 403);
         }
+
+        http_response_code(403);
+        exit('Invalid CSRF token');
     }
+}
+
 
     protected function csrfField(): string
     {

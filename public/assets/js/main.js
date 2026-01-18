@@ -1,34 +1,24 @@
-/**
- * Navbar JavaScript - Mobile Menu Toggle & User Dropdown
- * Afro Elegance Custom Clothing Application
- */
+/** @format */
 
 (function () {
 	"use strict";
 
-	// Wait for DOM to load
 	document.addEventListener("DOMContentLoaded", function () {
-		// Mobile Menu Toggle
+		//  Menu Toggle
 		const navToggle = document.getElementById("navToggle");
 		const navMenu = document.getElementById("navMenu");
+		const logoutForm = document.getElementById("logoutForm");
+		const logoutBtn = document.getElementById("logoutBtn");
 
 		if (navToggle && navMenu) {
 			navToggle.addEventListener("click", function () {
-				// Toggle active class on button
 				navToggle.classList.toggle("active");
-
-				// Toggle active class on menu
 				navMenu.classList.toggle("active");
-
-				// Prevent body scroll when menu is open
-				if (navMenu.classList.contains("active")) {
-					document.body.style.overflow = "hidden";
-				} else {
-					document.body.style.overflow = "";
-				}
+				document.body.style.overflow = navMenu.classList.contains("active")
+					? "hidden"
+					: "";
 			});
 
-			// Close menu when clicking on a link
 			const navLinks = navMenu.querySelectorAll(".navbar__link");
 			navLinks.forEach(function (link) {
 				link.addEventListener("click", function () {
@@ -38,7 +28,6 @@
 				});
 			});
 
-			// Close menu when clicking outside
 			document.addEventListener("click", function (event) {
 				const isClickInsideMenu = navMenu.contains(event.target);
 				const isClickOnToggle = navToggle.contains(event.target);
@@ -55,8 +44,7 @@
 			});
 		}
 
-		// User Dropdown Enhancement (optional - CSS handles hover)
-		// This adds click functionality for touch devices
+		// User Dropdown 
 		const userMenuBtn = document.getElementById("userMenuBtn");
 		const userDropdown = document.getElementById("userDropdown");
 
@@ -65,7 +53,6 @@
 				e.preventDefault();
 				e.stopPropagation();
 
-				// Toggle visibility on touch devices
 				if (userDropdown.style.opacity === "1") {
 					userDropdown.style.opacity = "0";
 					userDropdown.style.visibility = "hidden";
@@ -77,7 +64,6 @@
 				}
 			});
 
-			// Close dropdown when clicking outside
 			document.addEventListener("click", function (event) {
 				const isClickInside =
 					userMenuBtn.contains(event.target) ||
@@ -91,22 +77,104 @@
 			});
 		}
 
-		// Navbar Scroll Effect (optional - adds shadow on scroll)
+		// Navbar shadow on scroll
 		const navbar = document.querySelector(".navbar");
 		if (navbar) {
-			let lastScroll = 0;
-
 			window.addEventListener("scroll", function () {
 				const currentScroll = window.pageYOffset;
-
-				if (currentScroll > 100) {
-					navbar.style.boxShadow = "0 4px 24px rgba(92, 61, 46, 0.15)";
-				} else {
-					navbar.style.boxShadow = "0 4px 20px rgba(92, 61, 46, 0.08)";
-				}
-
-				lastScroll = currentScroll;
+				navbar.style.boxShadow =
+					currentScroll > 100
+						? "0 4px 24px rgba(92, 61, 46, 0.15)"
+						: "0 4px 20px rgba(92, 61, 46, 0.08)";
 			});
 		}
+
+		// Logout warning
+		if (logoutForm && logoutBtn) {
+			logoutForm.addEventListener("submit", function (e) {
+				const msg =
+					"Logging out will clear your cart and favourites (they are not saved).\n\nDo you want to continue?";
+				if (!confirm(msg)) e.preventDefault();
+			});
+		}
+
+		// ============================================
+		// Counters (Cart + Favourites)
+		// ============================================
+		const cartCountEl = document.getElementById("cartCount");
+		const favCountEl = document.getElementById("favCount");
+
+		function pulse(el) {
+			if (!el) return;
+			el.classList.remove("pulse");
+			void el.offsetWidth;
+			el.classList.add("pulse");
+			setTimeout(() => el.classList.remove("pulse"), 260);
+		}
+
+		async function updateCartCount() {
+			if (!cartCountEl) return;
+
+			try {
+				const res = await csrfFetch("/getBasketCount", {
+					method: "GET",
+					credentials: "same-origin",
+					headers: { Accept: "application/json" },
+				});
+
+				if (!res.ok) return;
+
+				const data = await res.json().catch(() => ({}));
+				const count = Number(data.count ?? 0);
+
+				cartCountEl.textContent = String(count);
+				cartCountEl.hidden = count <= 0;
+
+				if (count > 0) pulse(cartCountEl);
+			} catch (err) {
+				console.error("Failed to update cart count:", err);
+			}
+		}
+
+		async function updateFavCount() {
+			if (!favCountEl) return;
+
+			try {
+				const res = await fetch("/api/favourites/products", {
+					method: "GET",
+					credentials: "same-origin",
+					headers: { Accept: "application/json" },
+				});
+
+				// If not logged in, controller may return 401/403 -> hide badge
+				if (!res.ok) {
+					favCountEl.hidden = true;
+					return;
+				}
+
+				const data = await res.json().catch(() => ({}));
+				const list = Array.isArray(data.products) ? data.products : [];
+				const count = list.length;
+
+				favCountEl.textContent = String(count);
+				favCountEl.hidden = count <= 0;
+
+				if (count > 0) pulse(favCountEl);
+			} catch (err) {
+				console.error("Failed to update favourite count:", err);
+			}
+		}
+
+		// initial load
+		updateCartCount();
+		updateFavCount();
+
+		// update when pages dispatch events
+		window.addEventListener("cartUpdated", updateCartCount);
+		window.addEventListener("favouritesUpdated", updateFavCount);
+
+		// allow other scripts to call
+		window.updateCartCount = updateCartCount;
+		window.updateFavCount = updateFavCount;
 	});
 })();

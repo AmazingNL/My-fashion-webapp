@@ -37,7 +37,6 @@
     <nav class="breadcrumb-nav">
         <div class="container-wide">
             <div class="breadcrumb">
-                <a href="/" class="breadcrumb-item">Home</a>
                 <svg class="breadcrumb-separator" viewBox="0 0 24 24">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" />
                 </svg>
@@ -105,8 +104,9 @@
                             <!-- Stock Indicator -->
                             <div id="stockInfo" class="stock-info" style="display:none;">
                                 <svg class="stock-icon" viewBox="0 0 24 24" fill="none">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/>
-                                    <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor"
+                                        stroke-width="2" />
+                                    <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2" />
                                 </svg>
                                 <span class="stock-message">
                                     <strong id="stockCount" data-stock-for=""></strong>
@@ -193,24 +193,27 @@
     </section>
 
     <!-- Similar Products -->
-    <section id="similarProductsSection" class="similar-section" style="display: none;">
+    <section id="similarProductsSection" class="similar-section" style="display:none;">
         <div class="container-wide">
             <div class="section-header">
                 <h2 class="section-heading">You Might Also Love</h2>
+
                 <a href="/products" class="view-all-link">
-                    <span>View All</span>
-                    <svg class="arrow-icon" viewBox="0 0 24 24">
-                        <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" />
-                        <polyline points="12 5 19 12 12 19" stroke="currentColor" stroke-width="2" />
+                    View All
+                    <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M5 12h14M13 5l6 7-6 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </a>
             </div>
 
-            <div id="similarProductsGrid" class="products-grid">
-                <!-- JavaScript will populate similar products here -->
-            </div>
+            <!-- JS injects similar products here -->
+            <div id="similarProductsGrid" class="products-grid"></div>
         </div>
     </section>
+
+
+
 </main>
 
 <script src="/assets/js/productDetails.js"></script>

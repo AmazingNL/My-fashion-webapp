@@ -13,5 +13,4 @@ interface IOrderItemRepository {
     public function update(OrderItem $orderItem): void;
     public function delete($id): void;
 
-    // Define methods for order item repository
 }

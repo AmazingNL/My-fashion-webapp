@@ -6,7 +6,7 @@ use App\Repositories\IProductRepository;
 use Exception;
 use InvalidArgumentException;
 
-class CartService
+class CartService implements ICartService
 {
     private const CART_KEY = 'shopping_cart';
 
@@ -18,9 +18,6 @@ class CartService
         $this->initializeCart();
     }
 
-    /* =========================
-     * Public API (<= 15 lines)
-     * ========================= */
 
     public function addItem(int $productId, int $variantId, int $quantity): void
     {
@@ -140,7 +137,7 @@ class CartService
     }
 
     /* =========================
-     * Virtual stock (your goal)
+     * Virtual stock 
      * ========================= */
 
     public function getReservedVariantQuantity(int $variantId): int

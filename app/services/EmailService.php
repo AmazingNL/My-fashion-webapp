@@ -1,5 +1,7 @@
 <?php
 
+/****** No much time to integrate email service****/
+
 declare(strict_types=1);
 
 namespace App\Services;
@@ -12,8 +14,8 @@ class EmailService
 
     public function __construct()
     {
-        $this->fromEmail = 'noreply@nuellasignet.com';
-        $this->fromName = 'Nuella\'s Signet Fashion';
+        $this->fromEmail = 'noreply@AfroFashion.com';
+        $this->fromName = 'Afro Fashion';
         // In production, set this to true when mail server is configured
         $this->enabled = true; // For demonstration, we'll log emails
     }
@@ -23,7 +25,7 @@ class EmailService
      */
     public function sendWelcomeEmail(string $to, string $firstName): bool
     {
-        $subject = "Welcome to Nuella's Signet Fashion!";
+        $subject = "Welcome to Afro Fashion!";
 
         $message = "
         <html>
@@ -39,11 +41,11 @@ class EmailService
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h1>Welcome to Nuella's Signet!</h1>
+                    <h1>Welcome to Afro Fashion!</h1>
                 </div>
                 <div class='content'>
                     <h2>Hello {$firstName}!</h2>
-                    <p>Thank you for registering with Nuella's Signet Fashion. We're excited to have you!</p>
+                    <p>Thank you for registering with Afro Fashion. We're excited to have you!</p>
                     <p>You can now:</p>
                     <ul>
                         <li>Browse our exclusive collection of custom female clothing</li>
@@ -55,7 +57,7 @@ class EmailService
                     <p>Happy shopping!</p>
                 </div>
                 <div class='footer'>
-                    <p>&copy; 2025 Nuella's Signet Fashion. All rights reserved.</p>
+                    <p>&copy; 2025 Afro Fashion. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -128,7 +130,7 @@ class EmailService
                     <p>If you have any questions about your order, please contact our customer service.</p>
                 </div>
                 <div class='footer'>
-                    <p>&copy; 2025 Nuella's Signet Fashion. All rights reserved.</p>
+                    <p>&copy; 2025 Afro Fashion. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -141,49 +143,51 @@ class EmailService
     /**
      * Send password reset email
      */
-    public function sendPasswordResetEmail(string $to, string $firstName, string $token): bool
+    public function sendPasswordResetEmail(string $to, string $firstName, string $token, string $code): bool
     {
         $resetLink = "http://localhost/reset-password?token={$token}";
-        $subject = "Password Reset Request";
+        $subject = "Password Reset Code";
 
         $message = "
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
-                .content { background-color: #f4f4f4; padding: 20px; }
-                .button { display: inline-block; padding: 10px 20px; background-color: #8B4789; color: white; text-decoration: none; border-radius: 5px; }
-                .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h1>Password Reset</h1>
-                </div>
-                <div class='content'>
-                    <h2>Hello {$firstName}!</h2>
-                    <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                    <p style='text-align: center; margin: 30px 0;'>
-                        <a href='{$resetLink}' class='button'>Reset Password</a>
-                    </p>
-                    <p>Or copy and paste this link into your browser:</p>
-                    <p>{$resetLink}</p>
-                    <p>This link will expire in 1 hour.</p>
-                    <p>If you didn't request a password reset, please ignore this email.</p>
-                </div>
-                <div class='footer'>
-                    <p>&copy; 2025 Nuella's Signet Fashion. All rights reserved.</p>
-                </div>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f4f4f4; padding: 20px; }
+            .code { font-size: 22px; font-weight: bold; letter-spacing: 4px; text-align:center; padding: 10px; background:#fff; border-radius:8px; }
+            .button { display: inline-block; padding: 10px 20px; background-color: #8B4789; color: white; text-decoration: none; border-radius: 5px; }
+            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'><h1>Password Reset</h1></div>
+            <div class='content'>
+                <h2>Hello {$firstName}!</h2>
+                <p>Use the code below to confirm your password reset:</p>
+                <div class='code'>{$code}</div>
+
+                <p style='text-align: center; margin: 25px 0;'>
+                    <a href='{$resetLink}' class='button'>Enter Code</a>
+                </p>
+
+                <p>Or copy this link:</p>
+                <p>{$resetLink}</p>
+                <p>This code expires in 15 minutes.</p>
+                <p>If you didn't request this, ignore this email.</p>
             </div>
-        </body>
-        </html>
-        ";
+            <div class='footer'>
+                <p>&copy; 2025 Afro Fashion. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>";
 
         return $this->send($to, $subject, $message);
     }
+
 
     /**
      * Send appointment confirmation email
@@ -223,7 +227,7 @@ class EmailService
                     <p>If you need to reschedule, please contact us at least 24 hours in advance.</p>
                 </div>
                 <div class='footer'>
-                    <p>&copy; 2025 Nuella's Signet Fashion. All rights reserved.</p>
+                    <p>&copy; 2025 Afro Fashion. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -232,6 +236,40 @@ class EmailService
 
         return $this->send($to, $subject, $message);
     }
+
+    public function sendPasswordChangedEmail(string $to, string $firstName): bool
+    {
+        $subject = "Password Changed Successfully";
+
+        $message = "
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f4f4f4; padding: 20px; }
+            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'><h1>Password Updated</h1></div>
+            <div class='content'>
+                <h2>Hello {$firstName}!</h2>
+                <p>Your password was changed successfully.</p>
+                <p>If you did not do this, please contact support immediately.</p>
+            </div>
+            <div class='footer'>
+                <p>&copy; 2025 Afro Fashion. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>";
+
+        return $this->send($to, $subject, $message);
+    }
+
 
     /**
      * Send email - actual implementation
@@ -264,4 +302,6 @@ class EmailService
 
         return true; // Return true for demonstration
     }
+
+
 }

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\OrderItem;
-use App\Services\IOderItemService;
 use App\Repositories\IOrderItemRepository;
 
 class OrderItemService implements IOrderItemService

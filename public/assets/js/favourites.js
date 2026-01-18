@@ -16,7 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (!el) return;
 		el.textContent = msg;
 		el.hidden = false;
-		window.scrollTo({ top: 0, behavior: "smooth" });
+		const navH = document.querySelector(".navbar")?.offsetHeight || 90;
+		window.scrollTo({ top: navH + 10, behavior: "smooth" });
 		setTimeout(() => (el.hidden = true), 2500);
 	};
 
@@ -53,7 +54,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 
 		const data = await res.json().catch(() => ({}));
-		if (!res.ok) throw new Error(data?.error || data?.message || "Request failed");
+		if (!res.ok)
+			throw new Error(data?.error || data?.message || "Request failed");
 		return data;
 	}
 
@@ -106,7 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
 
           <div class="favCard__actions">
-            <a class="btn btn--ghost" href="/products/${Number(p.productId)}">View</a>
+            <a class="btn btn--ghost" href="/products/${Number(
+							p.productId
+						)}">View</a>
             <button class="btn btn--danger jsRemove" data-id="${Number(
 							p.productId
 						)}" type="button">Remove</button>
@@ -173,6 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			show(errBox, err.message || "Failed to clear favourites.");
 		}
 	});
+	window.dispatchEvent(new Event("favouritesUpdated"));
 
 	load();
 });

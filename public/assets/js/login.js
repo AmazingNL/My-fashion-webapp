@@ -1,92 +1,109 @@
 /** @format */
 
 document.addEventListener("DOMContentLoaded", () => {
-	const form = document.querySelector("#loginForm");
-	const errBox = document.querySelector("#formErrors");
-	const okBox = document.querySelector("#formSuccess");
-	const pass = document.querySelector("#password");
-	const email = document.querySelector("#email");
-	const loginBtn = document.querySelector("#loginBtn");
+  const form = document.querySelector("#loginForm");
+  const errBox = document.querySelector("#formErrors");
+  const okBox = document.querySelector("#formSuccess");
+  const pass = document.querySelector("#password");
+  const email = document.querySelector("#email");
+  const loginBtn = document.querySelector("#loginBtn");
 
-	if (!form) return;
+  if (!form) return;
 
-	const showError = (msg) => {
-		if (!errBox) return;
-		errBox.textContent = msg || "Something went wrong. Please try again.";
-		errBox.hidden = false;
-		if (okBox) okBox.hidden = true;
-	};
+  // ✅ Hide alerts on initial load (prevents empty boxes showing)
+  if (errBox) errBox.hidden = true;
+  if (okBox) okBox.hidden = true;
 
-	const showSuccess = (msg) => {
-		if (!okBox) return;
-		okBox.textContent = msg || "Logged in successfully.";
-		okBox.hidden = false;
-		if (errBox) errBox.hidden = true;
-	};
+  // Helpers to update alert text without destroying its inner HTML (icon, markup, etc.)
+  const setAlertText = (box, msg, fallback) => {
+    if (!box) return;
+    const textEl = box.querySelector(".af-alert__text") || box.querySelector("p") || box;
+    // If your alert has a <p class="af-alert__text">...</p>, this will target it.
+    // Otherwise it falls back to <p> or the box itself.
+    if (textEl === box) {
+      // If there's no inner text element, at least don't show empty
+      box.textContent = msg || fallback;
+    } else {
+      textEl.textContent = msg || fallback;
+    }
+  };
 
-	const setLoading = (on) => {
-		if (!loginBtn) return;
-		loginBtn.classList.toggle("is-loading", !!on);
-		loginBtn.disabled = !!on;
-	};
+  const showError = (msg) => {
+    if (!errBox) return;
+    setAlertText(errBox, msg, "Something went wrong. Please try again.");
+    errBox.hidden = false;
+    if (okBox) okBox.hidden = true;
+  };
 
-	// password toggle
-	document.addEventListener("click", (e) => {
-		const btn = e.target.closest("[data-toggle='password']");
-		if (!btn || !pass) return;
+  const showSuccess = (msg) => {
+    if (!okBox) return;
+    setAlertText(okBox, msg, "Logged in successfully.");
+    okBox.hidden = false;
+    if (errBox) errBox.hidden = true;
+  };
 
-		const hidden = pass.type === "password";
-		pass.type = hidden ? "text" : "password";
-		btn.setAttribute("aria-label", hidden ? "Hide password" : "Show password");
-		btn.title = hidden ? "Hide password" : "Show password";
-		btn.textContent = hidden ? "🙈" : "👁️";
-	});
+  const setLoading = (on) => {
+    if (!loginBtn) return;
+    loginBtn.classList.toggle("is-loading", !!on);
+    loginBtn.disabled = !!on;
+  };
 
-	// Ajax login (works with your controller: redirects on success, JSON on error)
-	form.addEventListener("submit", async (e) => {
-		e.preventDefault();
+  // Password toggle
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle='password']");
+    if (!btn || !pass) return;
 
-		const emailVal = (email?.value || "").trim();
-		const passVal = (pass?.value || "").trim();
+    const hidden = pass.type === "password";
+    pass.type = hidden ? "text" : "password";
+    btn.setAttribute("aria-label", hidden ? "Hide password" : "Show password");
+    btn.title = hidden ? "Hide password" : "Show password";
+    btn.textContent = hidden ? "🙈" : "👁️";
+  });
 
-		if (!emailVal || !passVal) {
-			showError("Email and password are required.");
-			return;
-		}
+  // Ajax login
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-		setLoading(true);
-		if (errBox) errBox.hidden = true;
-		if (okBox) okBox.hidden = true;
+    const emailVal = (email?.value || "").trim();
+    const passVal = (pass?.value || "").trim();
 
-		try {
-			const formData = new FormData(form);
+    // Hide alerts before validating
+    if (errBox) errBox.hidden = true;
+    if (okBox) okBox.hidden = true;
 
-			const res = await csrfFetch(form.action, {
-				method: "POST",
-				body: formData,
-				headers: { Accept: "application/json" },
-			});
+    if (!emailVal || !passVal) {
+      showError("Email and password are required.");
+      return;
+    }
 
-			// If your controller redirects on success, fetch follows it.
-			// When it does, res.redirected is true and res.url is the final page.
-			// ...after the fetch
-			const data = await res.json().catch(() => ({}));
+    setLoading(true);
 
-			if (!res.ok) {
-				showError(data.error || "Invalid email or password.");
-				return;
-			}
+    try {
+      const formData = new FormData(form);
 
-			if (data.redirect) {
-				window.location.href = data.redirect; // ✅ /products
-				return;
-			}
+      const res = await csrfFetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: { Accept: "application/json" },
+      });
 
-			showSuccess(data.message || "Logged in.");
-		} catch (err) {
-			showError("An unexpected error occurred. Please try again later.");
-		} finally {
-			setLoading(false);
-		}
-	});
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showError(data.error || "Invalid email or password.");
+        return;
+      }
+
+      if (data.redirect) {
+        window.location.href = data.redirect; // e.g. /products
+        return;
+      }
+
+      showSuccess(data.message || "Logged in.");
+    } catch (err) {
+      showError("An unexpected error occurred. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  });
 });

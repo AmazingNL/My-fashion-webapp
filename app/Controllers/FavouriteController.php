@@ -5,21 +5,17 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\ControllerBase;
-use App\Core\Middleware; // assuming this is a TRAIT
-use App\Services\ProductService;
-use App\Services\ActivityLogService;
+use App\Services\IProductService;
 use Exception;
 
 class FavouriteController extends ControllerBase
 {
 
-    private ProductService $productService;
-    private ActivityLogService $logService;
+    private IProductService $productService;
 
-    public function __construct(ProductService $productService, ActivityLogService $logService)
+    public function __construct(IProductService $productService)
     {
         $this->productService = $productService;
-        $this->logService = $logService;
     }
 
     public function viewFavourites(): void
@@ -123,22 +119,5 @@ class FavouriteController extends ControllerBase
         $this->jsonResponse(['success' => true, 'count' => count($favourites)]);
     }
 
-    public function clearFavourites(): void
-    {
-        $this->validateCsrf();
-        $this->ensureSession();
 
-        try {
-            $_SESSION['favourites'] = [];
-
-            $userId = $this->currentUserId();
-            if ($userId) {
-                $this->logService->log($userId, 'Cleared Favourites', 'favourite', null, 'All favourites removed');
-            }
-
-            $this->jsonResponse(['success' => true, 'message' => 'All favourites cleared']);
-        } catch (Exception $e) {
-            $this->jsonResponse(['success' => false, 'error' => 'Failed to clear favourites'], 500);
-        }
-    }
 }
