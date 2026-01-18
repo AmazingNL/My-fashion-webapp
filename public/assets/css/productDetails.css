@@ -1,7 +1,7 @@
 /** @format */
 /* ============================================
    PRODUCT DETAILS PAGE - AFRO ELEGANCE THEME
-   Imports unified styles from main.css
+   Clean full version (includes fixed Similar Products)
    ============================================ */
 
 /* Import main Afro theme */
@@ -42,6 +42,15 @@
 }
 
 /* ============================================
+   MAIN CONTENT LAYER FIX (keeps content above pattern)
+   ============================================ */
+
+.main-content {
+	position: relative;
+	z-index: 1;
+}
+
+/* ============================================
    LOADING STATE
    ============================================ */
 
@@ -74,12 +83,10 @@
 	border-top-color: var(--afro-burgundy);
 	animation-delay: 0s;
 }
-
 .spinner-ring:nth-child(2) {
 	border-right-color: var(--afro-gold);
 	animation-delay: -0.4s;
 }
-
 .spinner-ring:nth-child(3) {
 	border-bottom-color: var(--afro-terracotta);
 	animation-delay: -0.8s;
@@ -132,7 +139,7 @@
 
 .error-content {
 	text-align: center;
-	max-width: 500px;
+	max-width: 520px;
 	padding: 3rem 2rem;
 	background: linear-gradient(
 		135deg,
@@ -223,13 +230,8 @@
 }
 
 /* ============================================
-   MAIN CONTENT
+   CONTAINERS
    ============================================ */
-
-.main-content {
-	position: relative;
-	z-index: 1;
-}
 
 .container-wide {
 	max-width: 1400px;
@@ -304,6 +306,7 @@
 	height: 100%;
 	object-fit: cover;
 	transition: transform 0.6s ease;
+	display: block;
 }
 
 .image-container:hover .product-image {
@@ -312,10 +315,7 @@
 
 .image-overlay {
 	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
+	inset: 0;
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
@@ -377,7 +377,11 @@
 .currency {
 	font-size: 1.5rem;
 	font-weight: 600;
-	background: linear-gradient(135deg, var(--afro-burgundy), var(--afro-terracotta));
+	background: linear-gradient(
+		135deg,
+		var(--afro-burgundy),
+		var(--afro-terracotta)
+	);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
@@ -386,7 +390,11 @@
 .product-price {
 	font-size: 2.5rem;
 	font-weight: 800;
-	background: linear-gradient(135deg, var(--afro-burgundy), var(--afro-terracotta));
+	background: linear-gradient(
+		135deg,
+		var(--afro-burgundy),
+		var(--afro-terracotta)
+	);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
@@ -434,7 +442,6 @@
 	gap: 1.5rem;
 }
 
-/* Form Groups */
 .form-group {
 	display: flex;
 	flex-direction: column;
@@ -455,7 +462,6 @@
 	font-size: 1.25rem;
 }
 
-/* Select Wrapper */
 .select-wrapper {
 	position: relative;
 }
@@ -492,7 +498,10 @@
 	pointer-events: none;
 }
 
-/* Stock Info */
+/* ============================================
+   STOCK INFO
+   ============================================ */
+
 .stock-info {
 	display: flex;
 	align-items: center;
@@ -531,7 +540,6 @@
 	align-items: end;
 }
 
-/* Quantity Selector */
 .quantity-selector {
 	display: flex;
 	flex-direction: column;
@@ -595,7 +603,6 @@
 	outline: none;
 }
 
-/* Add to Cart Button */
 .btn-add-to-cart {
 	display: flex;
 	align-items: center;
@@ -683,24 +690,28 @@
 }
 
 /* ============================================
-   SIMILAR PRODUCTS SECTION
+   Works with your JS markup and prevents giant images
    ============================================ */
 
-.similar-section {
-	padding: 4rem 0;
+#similarProductsSection.similar-section {
+	margin-top: 4rem;
+	padding: 3.5rem 0;
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
-		rgba(248, 243, 232, 0.3) 100%
+		rgba(248, 243, 232, 0.35) 100%
 	);
+	position: relative;
+	z-index: 2;
 }
 
-.section-header {
+#similarProductsSection .section-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	margin-bottom: 2.5rem;
-	padding-bottom: 1.5rem;
+	gap: 1.5rem;
+	margin-bottom: 2rem;
+	padding-bottom: 1rem;
 	border-bottom: 3px solid transparent;
 	border-image: linear-gradient(
 			90deg,
@@ -711,7 +722,7 @@
 		1;
 }
 
-.section-heading {
+#similarProductsSection .section-heading {
 	font-family: "Playfair Display", serif;
 	font-size: clamp(1.75rem, 3vw, 2.5rem);
 	font-weight: 800;
@@ -719,7 +730,7 @@
 	margin: 0;
 }
 
-.view-all-link {
+#similarProductsSection .view-all-link {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -730,29 +741,90 @@
 	transition: all 0.3s ease;
 }
 
-.view-all-link:hover {
+#similarProductsSection .view-all-link:hover {
 	color: var(--afro-terracotta);
 	gap: 0.75rem;
 }
 
-.arrow-icon {
+#similarProductsSection .arrow-icon {
 	width: 20px;
 	height: 20px;
 	transition: transform 0.3s ease;
 }
 
-.view-all-link:hover .arrow-icon {
+#similarProductsSection .view-all-link:hover .arrow-icon {
 	transform: translateX(4px);
 }
 
-/* Products Grid for Similar Items */
-.products-grid {
+/* The grid is ONLY controlled here (no global .products-grid conflicts) */
+#similarProductsGrid {
+	margin-top: 1.25rem;
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: 2rem;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 1.5rem;
 }
 
-/* Use card styles from productLists.css */
+/* Card styles for JS markup (.product-card...) */
+#similarProductsGrid .product-card {
+	background: rgba(255, 255, 255, 0.92);
+	border: 1px solid var(--border-light);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	box-shadow: 0 6px 18px rgba(92, 61, 46, 0.1);
+	transition: transform 0.25s ease, box-shadow 0.25s ease,
+		border-color 0.25s ease;
+}
+
+#similarProductsGrid .product-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 12px 32px rgba(92, 61, 46, 0.16);
+	border-color: rgba(212, 175, 55, 0.45);
+}
+
+/* FIX: stop “giant model image” takeover */
+#similarProductsGrid .product-card-image {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 1 / 1.2;
+	overflow: hidden;
+	background: #fff;
+}
+
+#similarProductsGrid .product-card-image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* Text */
+#similarProductsGrid .product-card-content {
+	padding: 1rem 1rem 1.25rem;
+}
+
+#similarProductsGrid .product-card-title a {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+#similarProductsGrid .product-card-price {
+	font-weight: 700;
+}
+
+.toast {
+	top: 6.5rem;
+	z-index: 9999;
+}
+
+@media (max-width: 768px) {
+	.toast {
+		top: 5.25rem;
+		left: 1rem;
+		right: 1rem;
+	}
+}
 
 /* ============================================
    RESPONSIVE DESIGN
@@ -762,9 +834,11 @@
 	.container-wide {
 		padding: 0 1.5rem;
 	}
-
 	.product-grid {
 		gap: 3rem;
+	}
+	#similarProductsGrid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 }
 
@@ -817,15 +891,15 @@
 		padding: 1.5rem;
 	}
 
-	.section-header {
+	#similarProductsSection .section-header {
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 1rem;
 	}
 
-	.products-grid {
-		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-		gap: 1.5rem;
+	#similarProductsGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.25rem;
 	}
 }
 
@@ -863,8 +937,9 @@
 		padding: 0.875rem 1.5rem;
 	}
 
-	.products-grid {
+	#similarProductsGrid {
 		grid-template-columns: 1fr;
+		gap: 1rem;
 	}
 }
 
@@ -878,7 +953,7 @@
 	.loading-text,
 	.error-icon,
 	.btn-add-to-cart,
-	.view-all-link .arrow-icon {
+	#similarProductsSection .arrow-icon {
 		animation: none;
 		transition: none;
 	}
@@ -888,12 +963,12 @@
 	}
 }
 
-/* High contrast mode */
 @media (prefers-contrast: high) {
 	.gallery-main,
 	.form-select,
 	.quantity-input-wrapper,
-	.product-features {
+	.product-features,
+	#similarProductsGrid .product-card {
 		border-width: 3px;
 	}
 
@@ -902,13 +977,12 @@
 	}
 }
 
-/* Focus styles for keyboard navigation */
 .form-select:focus-visible,
 .qty-btn:focus-visible,
 .quantity-input:focus-visible,
 .btn-add-to-cart:focus-visible,
 .breadcrumb-item:focus-visible,
-.view-all-link:focus-visible {
+#similarProductsSection .view-all-link:focus-visible {
 	outline: 3px solid var(--afro-gold);
 	outline-offset: 3px;
 }

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-final class Appointment
+class Appointment
 {
     public function __construct(
         private ?int $appointmentId,

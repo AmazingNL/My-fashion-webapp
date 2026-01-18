@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 		quantityInput: document.getElementById("quantity"),
 		stockInfo: document.getElementById("stockInfo"),
 		stockMessage: document.getElementById("stockMessage"),
-		stockCount: document.getElementById("stockCount"), // ✅ add in view
+		stockCount: document.getElementById("stockCount"), 
 		addToBasketBtn: document.getElementById("addToBasket"),
 
 		// Quantity buttons
@@ -278,7 +278,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 		els.stockInfo.style.display = "flex";
 
-		// ✅ "tag" for current selected variant
+		// "tag" for current selected variant
 		if (els.stockCount) {
 			els.stockCount.dataset.stockFor = String(variantId);
 			els.stockCount.textContent = String(stock);
@@ -466,7 +466,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 					} to your cart`
 				);
 
-				// ✅ Update stock (virtual remaining stock)
+				// Update stock (virtual remaining stock)
 				applyRemainingStockFromServer(data);
 
 				// Update cart count + notify

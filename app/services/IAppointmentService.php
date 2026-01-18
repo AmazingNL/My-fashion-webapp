@@ -10,6 +10,7 @@ interface IAppointmentService
 
     // customer
     public function getUserAppointments(int $userId): array;
+        public function countPending(): int;
     public function getAvailableSlotsByDate(string $date): array;
     public function book(int $userId, int $slotId, ?string $designType, ?string $notes): int;
     public function updateAppointmentSlot(int $userId, int $appointmentId, int $newSlotId): void;

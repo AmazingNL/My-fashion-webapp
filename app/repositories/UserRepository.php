@@ -120,6 +120,19 @@ class UserRepository extends RepositoryBase implements IUserRepository
         ]);
     }
 
+    public function updateUserStatus(int $userId, bool $isActive): bool
+    {
+        $sql = "UPDATE users SET isActive = :isActive, updatedAt = NOW() WHERE userId = :userId";
+        $stmt = $this->getConnection()->prepare($sql);
+        $stmt->execute([
+            ':isActive' => $isActive ? 1 : 0,
+            ':userId' => $userId,
+        ]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+
     public function delete($id): void
     {
         // Implementation here

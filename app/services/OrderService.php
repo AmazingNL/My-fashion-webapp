@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\PaymentStatus;
@@ -28,7 +27,6 @@ class OrderService implements IOrderService
 
     /**
      * Place an order from cart snapshot.
-     * Returns: ['orderId' => int, 'totalAmount' => float]
      */
     public function placeOrder(
         int $userId,
@@ -38,61 +36,31 @@ class OrderService implements IOrderService
         OrderStatus $orderStatus = OrderStatus::PENDING,
         PaymentStatus $paymentStatus = PaymentStatus::PENDING
     ): array {
-        if ($userId <= 0) throw new InvalidArgumentException('Invalid user.');
-        $shippingAddress = trim($shippingAddress);
-        if ($shippingAddress === '') throw new InvalidArgumentException('Shipping address is required.');
+        $shipping = $this->requireShipping($userId, $shippingAddress);
+        $billing = $this->billingOrShipping($billingAddress, $shipping);
 
-        $billingAddress = trim($billingAddress ?? '');
-        if ($billingAddress === '') $billingAddress = $shippingAddress;
+        $cartItems = $this->requireCartItems();
+        $total = $this->requireTotal();
 
-        if ($this->cartService->isEmpty()) {
-            throw new InvalidArgumentException('Cart is empty.');
-        }
-
-        // If you have validateCart() in CartService, keep this.
-        if (method_exists($this->cartService, 'validateCart')) {
-            $errs = $this->cartService->validateCart();
-            if (!empty($errs)) throw new InvalidArgumentException(implode(' | ', $errs));
-        }
-
-        $cartItems = $this->cartService->getCartItems();
-        if (empty($cartItems)) throw new InvalidArgumentException('Cart is empty.');
-
-        $totalAmount = round((float)$this->cartService->getTotalPrice(), 2);
-        if ($totalAmount <= 0) throw new InvalidArgumentException('Invalid total amount.');
-
-        // Convert enums -> DB strings (because Order constructor expects strings)
-        $statusDb = $this->orderStatusToDb($orderStatus);
-        $paymentDb = $this->paymentStatusToDb($paymentStatus);
-
-        // ✅ Matches your constructor exactly:
-        // (?int, int, string, float, string, string, string, string, ?string, ?string)
-        $order = new Order(
-            null,           // orderId
-            $userId,        // userId
-            $statusDb,      // status (string)
-            $totalAmount,   // totalAmount
-            $shippingAddress,
-            $billingAddress,
-            $paymentMethod,
-            $paymentDb,     // paymentStatus (string)
-            null,           // createdAt
-            null            // updatedAt
+        $orderId = (int) $this->orderRepo->create(
+            $this->buildOrder($userId, $shipping, $billing, $paymentMethod, $total, $orderStatus, $paymentStatus)
         );
 
-        $orderId = (int)$this->orderRepo->create($order);
-        if ($orderId <= 0) throw new RuntimeException('Failed to create order.');
+        if ($orderId <= 0)
+            throw new RuntimeException('Failed to create order.');
 
         $this->orderItemService->createFromCart($orderId, $cartItems);
         $this->cartService->clearCart();
 
-        return ['orderId' => $orderId, 'totalAmount' => $totalAmount];
+        return ['orderId' => $orderId, 'totalAmount' => $total];
     }
+
 
     /** Customer: list my orders */
     public function getMyOrders(int $userId): array
     {
-        if ($userId <= 0) throw new InvalidArgumentException('Invalid user.');
+        if ($userId <= 0)
+            throw new InvalidArgumentException('Invalid user.');
         return $this->orderRepo->findByCustomerId($userId);
     }
 
@@ -100,50 +68,69 @@ class OrderService implements IOrderService
     public function getMyOrder(int $userId, int $orderId): Order
     {
         $order = $this->requireOrder($orderId);
-        if ((int)$order->getUserId() !== (int)$userId) {
+        if ((int) $order->getUserId() !== (int) $userId) {
             throw new RuntimeException('Not allowed.');
         }
         return $order;
     }
 
-public function getAllOrders(): array
-{
-    // Repository already returns Order objects
-    return $this->orderRepo->getAll();
-}
+    public function getAllOrders(): array
+    {
+        // Repository already returns Order objects
+        return $this->orderRepo->getAll();
+    }
+
+    public function countAllOrders(): int
+    {
+        return $this->orderRepo->countAll();
+    }
+
+    public function getOrderById(int $orderId): Order
+    {
+        return $this->requireOrder($orderId);
+    }
+
+    public function getItemsByOrderId(int $orderId): array
+    {
+        $this->requireOrder($orderId); // ensures order exists
+        return $this->orderItemService->getByOrderId($orderId);
+    }
 
 
     /** Customer: cancel order (only before shipped/delivered) */
     public function cancelMyOrder(int $userId, int $orderId): bool
     {
         $order = $this->getMyOrder($userId, $orderId);
-        $status = strtolower((string)$order->getStatus());
+        $status = strtolower((string) $order->getStatus());
 
         if (in_array($status, ['shipped', 'delivered'], true)) {
             throw new RuntimeException('Order can no longer be cancelled.');
         }
-        if ($status === 'cancelled') return true;
+        if ($status === 'cancelled')
+            return true;
 
-        return (bool)$this->orderRepo->updateStatus($orderId, strtoupper(OrderStatus::CANCELLED->name));
+        return (bool) $this->orderRepo->updateStatus($orderId, strtoupper(OrderStatus::CANCELLED->name));
     }
 
     /** Customer: update address (only before shipped) */
     public function updateMyAddresses(int $userId, int $orderId, string $shipping, ?string $billing = null): bool
     {
         $order = $this->getMyOrder($userId, $orderId);
-        $status = strtolower((string)$order->getStatus());
+        $status = strtolower((string) $order->getStatus());
 
         if (in_array($status, ['shipped', 'delivered'], true)) {
             throw new RuntimeException('Address cannot be changed after shipping.');
         }
 
         $shipping = trim($shipping);
-        if ($shipping === '') throw new InvalidArgumentException('Shipping address is required.');
+        if ($shipping === '')
+            throw new InvalidArgumentException('Shipping address is required.');
 
         $billing = trim($billing ?? '');
-        if ($billing === '') $billing = $shipping;
+        if ($billing === '')
+            $billing = $shipping;
 
-        return (bool)$this->orderRepo->updateAddresses($orderId, $shipping, $billing);
+        return (bool) $this->orderRepo->updateAddresses($orderId, $shipping, $billing);
     }
 
     /** Admin: update status using enum */
@@ -151,24 +138,35 @@ public function getAllOrders(): array
     {
         $order = $this->requireOrder($orderId);
 
-        $old = strtolower((string)$order->getStatus());
+        $old = strtolower((string) $order->getStatus());
         $new = $this->orderStatusToDb($newStatus);
 
-        // Basic transition rules (edit if your workflow differs)
+        // Basic transition rules
         $allowed = [
-            'pending'    => ['processing', 'cancelled'],
+            'pending' => ['processing', 'cancelled'],
             'processing' => ['paid', 'shipped', 'cancelled'],
-            'paid'       => ['shipped', 'cancelled'],
-            'shipped'    => ['delivered'],
-            'delivered'  => [],
-            'cancelled'  => [],
+            'paid' => ['shipped', 'cancelled'],
+            'shipped' => ['delivered'],
+            'delivered' => [],
+            'cancelled' => [],
         ];
 
         if (!isset($allowed[$old]) || !in_array($new, $allowed[$old], true)) {
             throw new RuntimeException("Invalid status transition: {$old} -> {$new}");
         }
 
-        return (bool)$this->orderRepo->updateStatus($orderId, $new);
+        // Auto payment update rule:
+        $payment = null;
+
+        if ($new === 'processing') {
+            $payment = $this->paymentStatusToDb(PaymentStatus::COMPLETED); // "completed"
+        } elseif ($new === 'cancelled') {
+            $payment = $this->paymentStatusToDb(PaymentStatus::FAILED); // "failed"
+        }
+
+        // Update status (and payment if needed)
+        return (bool) $this->orderRepo->updateStatus($orderId, $new, $payment);
+
     }
 
     /** Admin: update payment status using enum */
@@ -177,17 +175,19 @@ public function getAllOrders(): array
         $this->requireOrder($orderId);
         $pay = $this->paymentStatusToDb($paymentStatus);
 
-        return (bool)$this->orderRepo->updatePaymentStatus($orderId, $pay);
+        return (bool) $this->orderRepo->updatePaymentStatus($orderId, $pay);
     }
 
 
     // Private Helper methods//
     private function requireOrder(int $orderId): Order
     {
-        if ($orderId <= 0) throw new InvalidArgumentException('Invalid order.');
+        if ($orderId <= 0)
+            throw new InvalidArgumentException('Invalid order.');
 
         $order = $this->orderRepo->findById($orderId);
-        if (!$order) throw new RuntimeException('Order not found.');
+        if (!$order)
+            throw new RuntimeException('Order not found.');
 
         return $order;
     }
@@ -207,4 +207,69 @@ public function getAllOrders(): array
         // PaymentStatus::COMPLETED -> "completed"
         return strtolower($status->name);
     }
+
+    private function requireShipping(int $userId, string $shippingAddress): string
+    {
+        if ($userId <= 0)
+            throw new InvalidArgumentException('Invalid user.');
+        $shipping = trim($shippingAddress);
+        if ($shipping === '')
+            throw new InvalidArgumentException('Shipping address is required.');
+        return $shipping;
+    }
+
+    private function billingOrShipping(?string $billingAddress, string $shipping): string
+    {
+        $billing = trim((string) ($billingAddress ?? ''));
+        return $billing === '' ? $shipping : $billing;
+    }
+
+    private function requireCartItems(): array
+    {
+        if ($this->cartService->isEmpty())
+            throw new InvalidArgumentException('Cart is empty.');
+
+        if (method_exists($this->cartService, 'validateCart')) {
+            $errs = $this->cartService->validateCart();
+            if (!empty($errs))
+                throw new InvalidArgumentException(implode(' | ', $errs));
+        }
+
+        $items = $this->cartService->getCartItems();
+        if (empty($items))
+            throw new InvalidArgumentException('Cart is empty.');
+        return $items;
+    }
+
+    private function requireTotal(): float
+    {
+        $total = round((float) $this->cartService->getTotalPrice(), 2);
+        if ($total <= 0)
+            throw new InvalidArgumentException('Invalid total amount.');
+        return $total;
+    }
+
+    private function buildOrder(
+        int $userId,
+        string $shipping,
+        string $billing,
+        string $paymentMethod,
+        float $total,
+        OrderStatus $orderStatus,
+        PaymentStatus $paymentStatus
+    ): Order {
+        return new Order(
+            null,
+            $userId,
+            $this->orderStatusToDb($orderStatus),
+            $total,
+            $shipping,
+            $billing,
+            $paymentMethod,
+            $this->paymentStatusToDb($paymentStatus),
+            null,
+            null
+        );
+    }
+
 }

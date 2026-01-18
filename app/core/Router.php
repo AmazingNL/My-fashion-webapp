@@ -19,6 +19,15 @@ class Router
             $r->addRoute('GET', '/viewUsers', ['App\Controllers\UserController', 'viewUsers']);
             $r->addRoute('POST', '/registerUser', ['App\Controllers\UserController', 'registerUser']);
             $r->addRoute('POST', '/logout', ['App\Controllers\AuthController', 'logout']);
+            $r->addRoute('GET', '/aboutUs', ['App\Controllers\UserController', 'aboutUs']);
+            // Forgot password
+            $r->addRoute('GET', '/forgotPassword', ['App\Controllers\AuthController', 'showForgotPassword']);
+            $r->addRoute('POST', '/forgotPassword', ['App\Controllers\AuthController', 'requestReset']);
+
+            // Reset code verification page
+            $r->addRoute('GET', '/reset-password', ['App\Controllers\AuthController', 'showResetCode']);
+            $r->addRoute('POST', '/reset-password/verify', ['App\Controllers\AuthController', 'verifyResetCode']);
+
 
 
             /// Product routes
@@ -64,6 +73,15 @@ class Router
             $r->addRoute('POST', '/admin/products/update', ['App\Controllers\AdminController', 'updateProduct']);
             $r->addRoute('GET', '/admin/orders/api', ['App\Controllers\OrderController', 'adminApiList']);
             $r->addRoute('GET', '/admin/orders/{id:\d+}/items/api', ['App\Controllers\OrderController', 'adminApiItems']);
+            $r->addRoute('POST', '/admin/orders/{id:\d+}/status/api', ['App\Controllers\OrderController', 'adminApiUpdateStatus']);
+            $r->addRoute('GET', '/admin/orders/{id:\d+}', ['App\Controllers\AdminController', 'orderShow']);
+            $r->addRoute('GET', '/admin/orders/{id:\d+}/items', ['App\Controllers\AdminController', 'orderItems']);
+            // API for slots
+            $r->addRoute('GET', '/api/appointments/slots', ['App\Controllers\AppointmentController', 'apiAvailableSlots']);
+            // Admin appointment routes
+            $r->addRoute('GET', '/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
+            $r->addRoute('POST', '/admin/appointments/slots/add', ['App\Controllers\AppointmentController', 'adminAddSlot']);
+            $r->addRoute('POST', '/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
 
 
             // Orders + Checkout
@@ -87,12 +105,7 @@ class Router
             $r->addRoute('POST', '/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
             $r->addRoute('POST', '/appointments/{id:\d+}/save', ['App\Controllers\AppointmentController', 'updateDetails']);
             $r->addRoute('POST', '/appointments/{id:\d+}/cancel', ['App\Controllers\AppointmentController', 'cancel']);
-            // API for slots
-            $r->addRoute('GET', '/api/appointments/slots', ['App\Controllers\AppointmentController', 'apiAvailableSlots']);
-            // Admin appointment routes
-            $r->addRoute('GET', '/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
-            $r->addRoute('POST', '/admin/appointments/slots/add', ['App\Controllers\AppointmentController', 'adminAddSlot']);
-            $r->addRoute('POST', '/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
+
 
 
         });
@@ -130,7 +143,6 @@ class Router
                 // Build controller (inject dependencies when needed)
                 switch ($class) {
                     case \App\Controllers\UserController::class:
-                    case \App\Controllers\AuthController::class:
                         $userRepository = new \App\Repositories\UserRepository();
                         $activityLogRepository = new \App\Repositories\ActivityLogRepository();
                         $userService = new \App\Services\UserService($userRepository);
@@ -199,17 +211,52 @@ class Router
                         $productRepository = new \App\Repositories\ProductRepository();
                         $userRepository = new \App\Repositories\UserRepository();
                         $activityLogRepository = new \App\Repositories\ActivityLogRepository();
+
                         $productService = new \App\Services\ProductService($productRepository);
                         $userService = new \App\Services\UserService($userRepository);
                         $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
-                        $controller = new $class($productService, $userService, $activityLogService);
+
+                        // Orders dependencies (same pattern your project uses)
+                        $orderRepository = new \App\Repositories\OrderRepository();
+                        $orderItemRepository = new \App\Repositories\OrderItemRepository();
+                        $orderItemService = new \App\Services\OrderItemService($orderItemRepository);
+                        $cartService = new \App\Services\CartService($productRepository);
+                        $orderService = new \App\Services\OrderService($orderRepository, $orderItemService, $cartService);
+
+                        $appointmentRepository = new \App\Repositories\AppointmentRepository();
+                        $appointmentSlotRepository = new \App\Repositories\AppointmentSlotRepository();
+                        $appointmentService = new \App\Services\AppointmentService($appointmentRepository, $appointmentSlotRepository);
+
+                        $controller = new $class(
+                            $productService,
+                            $userService,
+                            $activityLogService,
+                            $orderService,
+                            $appointmentService
+                        );
+
                         break;
+
 
                     case \App\Controllers\ActivityLogController::class:
                         $activityLogRepository = new \App\Repositories\ActivityLogRepository();
                         $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
                         $controller = new $class($activityLogService);
                         break;
+
+
+                    case \App\Controllers\AuthController::class:
+                        $userRepository = new \App\Repositories\UserRepository();
+                        $userService = new \App\Services\UserService($userRepository);
+
+                        $emailService = new \App\Services\EmailService();
+
+                        $resetRepo = new \App\Repositories\PasswordResetTokenRepository();
+                        $resetService = new \App\Services\PasswordResetService($resetRepo);
+
+                        $controller = new $class($userService, $emailService, $resetService);
+                        break;
+
 
 
                     default:

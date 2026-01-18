@@ -23,7 +23,7 @@ interface IProductRepository
     public function update(Product $product): void;
     public function delete($id): void;
 
-    // ✅ NEW (Admin variant management)
+    // (Admin variant management)
     public function updateVariant(ProductVariant $variant): void;
     public function deleteVariant(int $variantId): void;
 

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\ActivityLog;
 
 interface IActivityLogService
 {
@@ -12,11 +11,29 @@ interface IActivityLogService
         ?string $entityType = null,
         ?int $entityId = null,
         ?string $details = null
-    ): void;
+    ): ?int;
 
-    public function getAllLogs(int $limit = 100, int $offset = 0): array;
-    public function getUserLogs(int $userId, int $limit = 100): array;
-    public function getActionLogs(string $action, int $limit = 100): array;
-    public function cleanupOldLogs(int $days = 90): int;
-    public function exportLogsToFile(string $filename): string;
+    public function getLogs(
+        int $limit = 50,
+        int $offset = 0,
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): array;
+    public function countLogs(
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): int;
+    public function clearAll(): int;
+    public function purgeOlderThan(int $days): int;
+    public function exportLogsToFile(
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): string;
+
 }

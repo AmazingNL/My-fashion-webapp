@@ -4,9 +4,6 @@ namespace App\Repositories;
 
 use App\Core\RepositoryBase;
 use App\Models\OrderItem;
-use App\Models\Order;
-use App\Models\ProductVariant;
-use DateTime;
 use PDO;
 
 class OrderItemRepository extends RepositoryBase implements IOrderItemRepository
@@ -64,7 +61,6 @@ public function findByOrderId($orderId): array
 {
     $orderItems = [];
 
-    // NOTE: adjust column names if your DB uses "name" instead of "productName"
     $sql = "
         SELECT 
             oi.orderItemId, oi.orderId, oi.productId, oi.variantId, oi.quantity, oi.price, oi.createdAt,
@@ -95,7 +91,7 @@ public function findByOrderId($orderId): array
             $row['createdAt'] ?? null
         );
 
-        // attach joined info (optional)
+        // attach joined info 
         $item->setProductName($row['productName'] ?? null);
         $item->setProductImage($row['productImage'] ?? null);
         $item->setVariantSize($row['variantSize'] ?? null);

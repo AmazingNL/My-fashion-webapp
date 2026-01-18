@@ -16,12 +16,27 @@ interface IProductService
     public function updateProduct(Product $product): array;
     public function deleteProduct($id): array;
 
-    // ✅ Variant admin
+    // Variant admin
     public function getVariantsByProductId(int $productId): array;
     public function addVariantToProduct(ProductVariant $variant): array;
-    public function updateVariant(ProductVariant $variant): array;
+    public function updateVariantByFields(
+        int $variantId,
+        string $size,
+        string $colour,
+        int $stockQuantity,
+        float $price
+    ): array;
+
+    public function createVariantByFields(
+        int $productId,
+        string $size,
+        string $colour,
+        int $stockQuantity,
+        float $price
+    ): array;
     public function deleteVariant(int $variantId): array;
 
     // Product + variants create (already in your service file)
     public function createProductWithVariants(Product $product, array $variantsInput): array;
+    public function toggleFavourite($productId): array;
 }

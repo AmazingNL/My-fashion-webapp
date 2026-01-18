@@ -75,22 +75,29 @@ document.addEventListener("DOMContentLoaded", () => {
 			okBox.textContent = "";
 		}
 
-		let success = false; 
+		let success = false;
 
 		try {
-			const res = await fetch("/addProduct", {
+			const formData = new FormData(form);
+			const res = await csrfFetch(form.action, {
 				method: "POST",
-				body: new FormData(form),
-				headers: { Accept: "application/json" },
-				credentials: "same-origin",
+				body: formData,
+				headers: {
+					Accept: "application/json",
+				},
 			});
 
-			const raw = await res.text();
-			console.log("STATUS:", res.status);
-			console.log("RAW:", raw);
-
+			const contentType = res.headers.get("content-type") || "";
 			let data = {};
-			data = raw ? JSON.parse(raw) : {};
+
+			if (contentType.includes("application/json")) {
+				data = await res.json();
+			} else {
+				const raw = await res.text();
+				data = {
+					errors: [raw || "Unexpected response from server. Please try again."],
+				};
+			}
 
 			if (!res.ok) {
 				const errs = Array.isArray(data.errors)

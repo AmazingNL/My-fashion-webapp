@@ -92,16 +92,22 @@ document.addEventListener("DOMContentLoaded", () => {
 				const status = normalizeStatus(o.status);
 				const pay = normalizeStatus(o.paymentStatus);
 
+				const payClass =
+					pay === "completed"
+						? "pill pill--ok"
+						: pay === "failed"
+						? "pill pill--danger"
+						: "pill";
+
 				return `
           <article class="card orders__card">
             <div class="orders__cardTop">
               <div class="orders__id">Order #${id}</div>
               <div class="orders__badges">
                 ${badge(status)}
-                <span class="pill pill--muted">pay: ${escapeHtml(
-									pay || "n/a"
-								)}</span>
-              </div>
+
+				<span class="pill ${payClass}">pay: ${escapeHtml(pay || "pending")}</span>
+             </div>
             </div>
 
             <div class="orders__meta">

@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 
-		// ✅ Success
+		// Success
 		okBox.textContent = data.message || "Registration successful!";
 		okBox.hidden = false;
 		form.reset();

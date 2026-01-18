@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-final class AppointmentSlot
+class AppointmentSlot
 {
     public function __construct(
         private ?int $slotId,

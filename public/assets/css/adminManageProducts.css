@@ -71,75 +71,6 @@
 	margin: 6px 0 0;
 }
 
-/* Admin nav */
-.admin-nav {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	margin-top: 14px;
-	padding: 12px 14px;
-	border-radius: 16px;
-	border: 1px solid rgba(0, 0, 0, 0.06);
-	background: rgba(255, 255, 255, 0.75);
-	backdrop-filter: blur(8px);
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-}
-
-.admin-nav__toggle {
-	display: none;
-	border: 1px solid rgba(0, 0, 0, 0.12);
-	background: rgba(0, 0, 0, 0.02);
-	border-radius: 999px;
-	padding: 10px 14px;
-	font-weight: 800;
-	cursor: pointer;
-}
-
-.admin-nav__items {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
-.admin-nav__link {
-	padding: 9px 12px;
-	border-radius: 999px;
-	font-weight: 800;
-	font-size: 0.92rem;
-	color: var(--text-primary);
-	border: 1px solid transparent;
-	background: transparent;
-	transition: 0.18s ease;
-}
-
-.admin-nav__link:hover {
-	background: rgba(212, 115, 94, 0.1);
-	border-color: rgba(212, 115, 94, 0.18);
-	transform: translateY(-1px);
-}
-
-.admin-nav__link.active {
-	background: rgba(139, 30, 63, 0.1);
-	border-color: rgba(139, 30, 63, 0.22);
-	color: var(--afro-burgundy);
-}
-
-/* Search */
-.admin-search input {
-	min-width: 260px;
-	border: 1px solid rgba(0, 0, 0, 0.10);
-	border-radius: 999px;
-	padding: 10px 14px;
-	background: rgba(255, 255, 255, 0.9);
-	outline: none;
-}
-
-.admin-search input:focus {
-	border-color: rgba(139, 30, 63, 0.35);
-	box-shadow: 0 0 0 4px rgba(139, 30, 63, 0.10);
-}
-
 /* Tools / filters */
 .admin-tools {
 	margin-top: 14px;
@@ -169,7 +100,7 @@
 
 .admin-tools select {
 	width: 100%;
-	border: 1px solid rgba(0, 0, 0, 0.10);
+	border: 1px solid rgba(0, 0, 0, 0.1);
 	border-radius: 12px;
 	padding: 10px 12px;
 	background: rgba(255, 255, 255, 0.9);
@@ -202,7 +133,7 @@
 	background: linear-gradient(
 		135deg,
 		rgba(244, 162, 97, 0.18),
-		rgba(139, 30, 63, 0.10)
+		rgba(139, 30, 63, 0.1)
 	);
 	display: grid;
 	place-items: center;
@@ -285,7 +216,7 @@
 
 .statusPill--warn {
 	background: rgba(212, 175, 55, 0.14);
-	border-color: rgba(212, 175, 55, 0.30);
+	border-color: rgba(212, 175, 55, 0.3);
 	color: #6b560f;
 }
 
@@ -309,19 +240,53 @@
 	border-radius: 12px;
 }
 
+/* Prevent product image bleed-through into the text area */
+.admin-prod__media {
+	position: relative;
+	overflow: hidden; /* hard clip the image to the media area */
+}
+
+.admin-prod__body {
+	background: #fff; /* fully opaque so text is always readable */
+	position: relative;
+	z-index: 1;
+}
+
+/* Optional: if you still want the “glass” look, keep it only on the header/cards around, not the text body */
+.admin-prod {
+	background: #fff; /* change from rgba(...) to solid */
+	backdrop-filter: none; /* optional, but avoids weird blending */
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
-	.admin-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.admin-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
 }
 
 @media (max-width: 900px) {
-	.admin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-	.admin-nav__toggle { display: inline-flex; }
-	.admin-nav__items { display: none; width: 100%; }
-	.admin-nav__items.active { display: flex; }
-	.admin-search input { min-width: 180px; width: 100%; }
+	.admin-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.admin-nav__toggle {
+		display: inline-flex;
+	}
+	.admin-nav__items {
+		display: none;
+		width: 100%;
+	}
+	.admin-nav__items.active {
+		display: flex;
+	}
+	.admin-search input {
+		min-width: 180px;
+		width: 100%;
+	}
 }
 
 @media (max-width: 520px) {
-	.admin-grid { grid-template-columns: 1fr; }
+	.admin-grid {
+		grid-template-columns: 1fr;
+	}
 }

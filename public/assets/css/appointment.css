@@ -157,3 +157,22 @@
 .small {
 	font-size: 0.9rem;
 }
+
+/* Appointment status – readable contrast */
+.appt-card .badge {
+	color: #2a1810;      /* dark text */
+	font-weight: 800;
+}
+
+.appt-card .badge[data-status="PENDING"] {
+	background: rgba(255, 193, 7, 0.25);
+}
+
+.appt-card .badge[data-status="BOOKED"],
+.appt-card .badge[data-status="CONFIRMED"] {
+	background: rgba(25, 135, 84, 0.25);
+}
+
+.appt-card .badge[data-status="CANCELLED"] {
+	background: rgba(220, 53, 69, 0.25);
+}

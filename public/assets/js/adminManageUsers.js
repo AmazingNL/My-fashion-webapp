@@ -12,24 +12,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	const toast = (el, msg) => {
 		if (!el) return;
+
+		// hide the other toast (so they can't both show)
+		const other = el === okBox ? errBox : okBox;
+		if (other) {
+			other.hidden = true;
+			clearTimeout(other._t);
+		}
+
 		el.textContent = msg;
 		el.hidden = false;
+
 		window.scrollTo({ top: 0, behavior: "smooth" });
+
 		clearTimeout(el._t);
 		el._t = setTimeout(() => (el.hidden = true), 2500);
 	};
-
-	const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
 	const postForm = async (url, data) => {
 		const body = new URLSearchParams();
 		Object.entries(data).forEach(([k, v]) => body.set(k, String(v)));
 
-		const res = await fetch(url, {
+		const res = await csrfFetch(url, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-				"X-CSRF-Token": csrf,
 			},
 			body,
 		});
@@ -80,6 +87,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// Status toggle
 	document.querySelectorAll(".jsToggleUser").forEach((btn) => {
+		if (btn.dataset.bound === "1") return; // <-- guard
+		btn.dataset.bound = "1";
 		btn.addEventListener("click", async () => {
 			const tr = btn.closest("tr");
 			const userId = tr?.getAttribute("data-user-id");

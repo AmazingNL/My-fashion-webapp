@@ -7,7 +7,7 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Repositories\IActivityLogRepository;
 
-class ActivityLogService
+class ActivityLogService implements IActivityLogService
 {
     public function __construct(
         private readonly IActivityLogRepository $repo
@@ -49,7 +49,7 @@ class ActivityLogService
         int $offset = 0,
         ?int $userId = null,
         ?string $action = null,
-        ?string $dateFrom = null, // 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'
+        ?string $dateFrom = null, 
         ?string $dateTo = null
     ): array {
         return $this->repo->getFiltered($userId, $action, $dateFrom, $dateTo, $limit, $offset);

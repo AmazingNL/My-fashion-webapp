@@ -15,7 +15,7 @@
             <div id="formErrors" class="notice notice--error" hidden></div>
             <div id="formSuccess" class="notice notice--success" hidden></div>
 
-            <form method="post" action="/addProduct" class="form" id="addProductForm" enctype="multipart/form-data">
+            <form id="addProductForm" action="/admin/addProduct" method="POST" enctype="multipart/form-data">
                 <?= $this->csrfField(); ?>
                 <div class="grid">
                     <!-- Left: Product Details -->
@@ -56,8 +56,7 @@
 
                             <label class="field">
                                 <span>Image URL</span>
-                                <input type="file" id="image" name="image"
-                                    accept="image/*" />
+                                <input type="file" id="image" name="image" accept="image/*" />
                             </label>
 
                             <figure class="preview">

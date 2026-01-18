@@ -37,7 +37,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
             <a class="btn btn--primary" href="/admin/addProductForm">➕ Add Product</a>
         </div>
     </header>
-<!-- -->
+    <!--
 
     <nav class="admin-nav card" aria-label="Admin actions">
         <button class="admin-nav__toggle" id="adminNavToggle" type="button" aria-label="Toggle admin navigation">
@@ -66,7 +66,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
             </label>
         </div>
     </nav>
-
+    -->
     <div class="notice notice--success" id="prodOk" hidden></div>
     <div class="notice notice--error" id="prodErr" hidden></div>
 

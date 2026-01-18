@@ -2,18 +2,23 @@
 /** @var array $users */
 $users = $users ?? [];
 
-function v($row, string $key, $default = null) {
-    if (is_array($row)) return $row[$key] ?? $default;
+function v($row, string $key, $default = null)
+{
+    if (is_array($row))
+        return $row[$key] ?? $default;
     if (is_object($row)) {
-        if (isset($row->$key)) return $row->$key;
+        if (isset($row->$key))
+            return $row->$key;
         $m = 'get' . ucfirst($key);
-        if (method_exists($row, $m)) return $row->$m();
+        if (method_exists($row, $m))
+            return $row->$m();
     }
     return $default;
 }
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
 ?>
+<meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
 <link rel="stylesheet" href="/assets/css/adminManageUsers.css">
 
 <section class="admin-shell">
@@ -26,7 +31,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
         <div class="admin-hero__stats">
             <div class="admin-stat">
                 <span class="admin-stat__label">Total Users</span>
-                <span class="admin-stat__value"><?= (int)count($users) ?></span>
+                <span class="admin-stat__value"><?= (int) count($users) ?></span>
             </div>
         </div>
     </header>
@@ -101,23 +106,22 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
                     <tbody>
                         <?php foreach ($users as $u): ?>
                             <?php
-                                $userId = (int) v($u, 'userId', v($u, 'id', 0));
-                                $username = (string) v($u, 'username', v($u, 'name', 'User'));
-                                $email = (string) v($u, 'email', '');
-                                $isAdmin = (bool) v($u, 'isAdmin', v($u, 'is_admin', false));
-                                $isActive = (bool) v($u, 'isActive', v($u, 'is_active', true));
-                                $role = $isAdmin ? 'admin' : 'customer';
-                                $status = $isActive ? 'active' : 'inactive';
+                            $userId = (int) v($u, 'userId', v($u, 'id', 0));
+                            $username = (string) v($u, 'username', v($u, 'name', 'User'));
+                            $email = (string) v($u, 'email', '');
+                            $roleValue = strtolower((string) v($u, 'role', 'customer'));
+                            $isAdmin = ($roleValue === 'admin');
+                            $isActive = (int) v($u, 'isActive', 0) === 1;
+                            $role = $isAdmin ? 'admin' : 'customer';
+                            $status = $isActive ? 'active' : 'inactive';
                             ?>
-                            <tr
-                                data-user-id="<?= $userId ?>"
+                            <tr data-user-id="<?= $userId ?>"
                                 data-search="<?= htmlspecialchars(strtolower($username . ' ' . $email), ENT_QUOTES, 'UTF-8') ?>"
-                                data-role="<?= $role ?>"
-                                data-status="<?= $status ?>"
-                            >
+                                data-role="<?= $role ?>" data-status="<?= $status ?>">
                                 <td>
                                     <div class="userCell">
-                                        <span class="userAvatar" aria-hidden="true"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                                        <span class="userAvatar"
+                                            aria-hidden="true"><?= strtoupper(substr($username, 0, 1)) ?></span>
                                         <div class="userMeta">
                                             <strong><?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?></strong>
                                             <div class="muted">#<?= $userId ?></div>
@@ -136,11 +140,8 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
                                     </span>
                                 </td>
                                 <td class="text-right">
-                                    <button
-                                        class="btn btn--ghost btn--sm jsToggleUser"
-                                        type="button"
-                                        data-next="<?= $isActive ? '0' : '1' ?>"
-                                    >
+                                    <button class="btn btn--ghost btn--sm jsToggleUser" type="button"
+                                        data-next="<?= $isActive ? '0' : '1' ?>">
                                         <?= $isActive ? 'Deactivate' : 'Activate' ?>
                                     </button>
                                 </td>

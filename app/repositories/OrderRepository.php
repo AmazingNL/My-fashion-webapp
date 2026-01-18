@@ -9,7 +9,6 @@ use App\Core\RepositoryBase;
 
 class OrderRepository extends RepositoryBase implements IOrderRepository
 {
-    // Implementation of repository methods here
 
     public function getAll(): array
     {
@@ -20,6 +19,13 @@ class OrderRepository extends RepositoryBase implements IOrderRepository
 
         return array_map([$this, 'mapRowToOrder'], $rows);
     }
+
+    public function countAll(): int
+    {
+        $sql = "SELECT COUNT(*) FROM orders";
+        return (int) $this->connection->query($sql)->fetchColumn();
+    }
+
 
 
     public function findById($orderId): ?Order
@@ -114,12 +120,32 @@ class OrderRepository extends RepositoryBase implements IOrderRepository
 
     }
 
-    public function updateStatus(int $orderId, string $status): bool
+    public function updateStatus(int $orderId, string $status, ?string $paymentStatus = null): bool
     {
-        $sql = "UPDATE orders SET status = :status, updatedAt = NOW() WHERE orderId = :orderId";
+        if ($paymentStatus !== null) {
+            $sql = "UPDATE orders 
+                SET status = :status, paymentStatus = :paymentStatus, updatedAt = NOW() 
+                WHERE orderId = :orderId";
+
+            $stmt = $this->connection->prepare($sql);
+            return $stmt->execute([
+                ':status' => $status,
+                ':paymentStatus' => $paymentStatus,
+                ':orderId' => $orderId
+            ]);
+        }
+
+        $sql = "UPDATE orders 
+            SET status = :status, updatedAt = NOW() 
+            WHERE orderId = :orderId";
+
         $stmt = $this->connection->prepare($sql);
-        return $stmt->execute([':status' => $status, ':orderId' => $orderId]);
+        return $stmt->execute([
+            ':status' => $status,
+            ':orderId' => $orderId
+        ]);
     }
+
 
     public function updatePaymentStatus(int $orderId, string $paymentStatus): bool
     {

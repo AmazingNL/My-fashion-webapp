@@ -32,9 +32,14 @@
                 <div class="appt-card">
                     <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
                         <h3>Appointment #<?= (int) $a['appointmentId'] ?></h3>
+                        <?php
+                        $status = strtoupper((string) ($a['status'] ?? 'PENDING'));
+                        ?>
+
                         <span class="badge" data-status="<?= htmlspecialchars($status) ?>">
                             <?= htmlspecialchars($status) ?>
                         </span>
+
                     </div>
 
                     <div class="appt-meta">

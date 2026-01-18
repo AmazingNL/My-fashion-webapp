@@ -15,69 +15,24 @@ class ProductService implements IProductService
         $this->productRepository = $productRepository;
     }
 
-    /* =========================
-       Public (existing) methods
-       ========================= */
 
     public function getProductDetails($id): array
     {
         try {
-            $product = $this->productRepository->getProductById($id);
+            $product = $this->requireProduct($id);
+            $variants = $this->requireVariants($id, $product);
+            [$sizes, $colors] = $this->extractSizesColors($variants);
 
-            if (!$product) {
-                error_log("Product with ID $id not found");
-                return [
-                    'product' => null,
-                    'variants' => [],
-                    'sizes' => [],
-                    'colors' => [],
-                    'errors' => ['Product not found'],
-                ];
-            }
-
-            $variants = $this->productRepository->getVariantsByProductId($id);
-
-            if (empty($variants)) {
-                error_log("WARNING: Product ID $id has no variants");
-                return [
-                    'product' => $product,
-                    'variants' => [],
-                    'sizes' => [],
-                    'colors' => [],
-                    'errors' => ['This product has no size/color options available'],
-                ];
-            }
-
-            $sizes = [];
-            $colors = [];
-
-            foreach ($variants as $variant) {
-                $size = is_object($variant) ? $variant->getSize() : ($variant['size'] ?? '');
-                $colour = is_object($variant) ? $variant->getColour() : ($variant['colour'] ?? ($variant['color'] ?? ''));
-
-                if ($size !== '')
-                    $sizes[$size] = true;
-                if ($colour !== '')
-                    $colors[$colour] = true;
-            }
-
-            return [
-                'product' => $product,
-                'variants' => $variants,
-                'sizes' => array_keys($sizes),
-                'colors' => array_keys($colors),
-                'errors' => [],
-            ];
+            return $this->detailsPayload($product, $variants, $sizes, $colors);
+        } catch (\RuntimeException $e) {
+            return $this->detailsPayload(null, [], [], [], ['Product not found']);
+        } catch (\InvalidArgumentException $e) {
+            return $this->detailsPayload($product ?? null, [], [], [], ['This product has no size/color options available']);
         } catch (\Throwable $e) {
-            return [
-                'product' => null,
-                'variants' => [],
-                'sizes' => [],
-                'colors' => [],
-                'errors' => ['Failed to retrieve product details'],
-            ];
+            return $this->detailsFail();
         }
     }
+
 
     public function getActiveProducts(): array
     {
@@ -184,7 +139,7 @@ class ProductService implements IProductService
     }
 
     /* =========================
-       Product admin 
+        Product admin 
        ========================= */
 
     public function updateProduct(Product $product): array
@@ -220,7 +175,7 @@ class ProductService implements IProductService
     }
 
     /* =========================
-       Variant admin API
+        Variant admin API
        ========================= */
 
     public function getVariantsByProductId(int $productId): array
@@ -338,7 +293,7 @@ class ProductService implements IProductService
     }
 
     /* =========================
-       Private helpers
+        Private helpers
        ========================= */
 
     private function validateProduct(Product $product): array
@@ -406,4 +361,64 @@ class ProductService implements IProductService
 
         return $errors;
     }
+
+    private function detailsPayload($product, array $variants, array $sizes, array $colors, array $errors = []): array
+    {
+        return [
+            'product' => $product,
+            'variants' => $variants,
+            'sizes' => $sizes,
+            'colors' => $colors,
+            'errors' => $errors,
+        ];
+    }
+
+    private function detailsFail(): array
+    {
+        return $this->detailsPayload(null, [], [], [], ['Failed to retrieve product details']);
+    }
+
+    private function requireProduct($id)
+    {
+        $product = $this->productRepository->getProductById($id);
+        if ($product)
+            return $product;
+
+        error_log("Product with ID $id not found");
+        return null; // keep flow consistent with your original contract
+    }
+
+    private function requireVariants($id, $product): array
+    {
+        if (!$product) {
+            throw new \RuntimeException('PRODUCT_NOT_FOUND');
+        }
+
+        $variants = $this->productRepository->getVariantsByProductId($id);
+        if (!empty($variants)) {
+            return $variants;
+        }
+
+        error_log("WARNING: Product ID $id has no variants");
+        throw new \InvalidArgumentException('NO_VARIANTS');
+    }
+
+
+    private function extractSizesColors(array $variants): array
+    {
+        $sizes = $colors = [];
+
+        foreach ($variants as $v) {
+            $size = is_object($v) ? $v->getSize() : (string) ($v['size'] ?? '');
+            $colour = is_object($v) ? $v->getColour() : (string) ($v['colour'] ?? ($v['color'] ?? ''));
+
+            if ($size !== '')
+                $sizes[$size] = true;
+            if ($colour !== '')
+                $colors[$colour] = true;
+        }
+
+        return [array_keys($sizes), array_keys($colors)];
+    }
+
 }

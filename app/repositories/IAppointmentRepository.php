@@ -8,6 +8,7 @@ use App\Models\AppointmentStatus;
 interface IAppointmentRepository
 {
     public function getAll(): array;
+        public function countByStatus(AppointmentStatus $status): int;
     public function getAllWithSlot(): array;
 
     public function findById(int $id): ?array;         // appointment + slot

@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-interface ICartService {
+interface ICartService
+{
 
     public function addItem(int $productId, int $variantId, int $quantity): void;
     public function updateQuantity(int $productId, int $variantId, int $quantity): bool;
@@ -11,4 +12,8 @@ interface ICartService {
     public function getTotalPrice(): float;
     public function getItemCount(): int;
     public function clearCart(): void;
+    public function isEmpty(): bool;
+    public function validateCart(): array;
+    public function getVirtualVariantStock(int $variantId): int;
+
 }

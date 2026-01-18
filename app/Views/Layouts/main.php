@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/login.css">
     <link rel="stylesheet" href="/assets/css/productDetails.css">
+    <link rel="stylesheet" href="/assets/css/about.css">
+
 
 </head>
 
@@ -51,21 +53,32 @@
             <ul class="navbar__menu" id="navMenu">
                 <li><a href="/products" class="navbar__link">Home</a></li>
                 <li><a href="/appointments" class="navbar__link">Appointments</a></li>
-                <li><a href="/about" class="navbar__link">About</a></li>
-                <li><a href="/contact" class="navbar__link">Contact</a></li>
+                <li><a href="/aboutUs" class="navbar__link">About</a></li>
             </ul>
 
             <!-- User Actions -->
             <div class="navbar__actions">
                 <?php if (isset($_SESSION['userId'])): ?>
                     <!-- Logged In User -->
-                    <a href="/favourites" class="navbar__cart">
+                
+                    <a class="navbar__favourite" href="/favourites">
+                        <span class="navbar__icon">
+                            ❤️
+                        <span id="favCount" class="navbar__cart-count" hidden>0</span>
+                        </span>
+                        Favourites
+                    </a>
 
-                        <span>Favourites</span>
+
+                    <a href="/viewCart" class="navbar__cart">
+                        <span class="navbar__icon">
+                            🛒
+                            <span id="cartCount" class="navbar__cart-count" hidden>0</span>
+                        </span>
+                        Cart
                     </a>
-                    <a href="/viewCart" class="navbar__cart" aria-label="Shopping cart">
-                        🛒 Cart
-                    </a>
+
+
                     <div class="navbar__user">
                         <button class="navbar__user-btn" id="userMenuBtn">
                             <span class="navbar__user-avatar">
@@ -74,27 +87,24 @@
                             <span class="navbar__user-name"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
                         </button>
                         <div class="navbar__dropdown" id="userDropdown">
-                            <a href="/profile" class="navbar__dropdown-item">My Profile</a>
                             <a href="/orders" class="navbar__dropdown-item">My Orders</a>
                             <a href="/appointments" class="navbar__dropdown-item">My Appointments</a>
-                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                                <hr class="navbar__dropdown-divider">
-                                <a href="/admin/dashboard" class="navbar__dropdown-item navbar__dropdown-item--admin">Admin
-                                    Panel</a>
-                            <?php endif; ?>
                             <hr class="navbar__dropdown-divider">
-                            <form class="navbar__dropdown-item " action="/logout" method="POST" style="display:inline;">
+                            <form id="logoutForm" class="navbar__dropdown-item" action="/logout" method="POST"
+                                style="display:inline;">
                                 <?= $this->csrfField(); ?>
-                                <button type="submit" class="navbar__dropdown-item navbar__dropdown-item--logout">
+                                <button id="logoutBtn" type="submit"
+                                    class="navbar__dropdown-item navbar__dropdown-item--logout">
                                     Logout
                                 </button>
                             </form>
+
 
                         </div>
                     </div>
                 <?php else: ?>
                     <!-- Guest User -->
-                    <a href="/showLogin" class="btn btn--ghost navbar__btn">Login</a>
+                    <a href="/" class="btn btn--ghost navbar__btn">Login</a>
                     <a href="/showRegistrationForm" class="btn btn--primary navbar__btn">Register</a>
                 <?php endif; ?>
             </div>
@@ -158,8 +168,7 @@
                     <li><a href="/" class="footer__link">Home</a></li>
                     <li><a href="/products" class="footer__link">Shop Collection</a></li>
                     <li><a href="/appointments" class="footer__link">Book Appointment</a></li>
-                    <li><a href="/about" class="footer__link">About Us</a></li>
-                    <li><a href="/contact" class="footer__link">Contact</a></li>
+                    <li><a href="/aboutUs" class="footer__link">About Us</a></li>
                 </ul>
             </div>
 
@@ -168,10 +177,6 @@
                 <h3 class="footer__title">Customer Care</h3>
                 <ul class="footer__links">
                     <li><a href="/orders" class="footer__link">Track Order</a></li>
-                    <li><a href="/faq" class="footer__link">FAQs</a></li>
-                    <li><a href="/shipping" class="footer__link">Shipping Info</a></li>
-                    <li><a href="/returns" class="footer__link">Returns & Exchanges</a></li>
-                    <li><a href="/size-guide" class="footer__link">Size Guide</a></li>
                 </ul>
             </div>
 
@@ -223,7 +228,9 @@
 
     <!-- Scripts -->
     <script src="/assets/js/csrf-fetch.js"></script>
-    <script src="/assets/js/navbar.js"></script>
+    <script src="/assets/js/main.js"></script>
+    <script defer src="/assets/js/about.js"></script>
+
 </body>
 
 </html>

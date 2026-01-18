@@ -9,7 +9,9 @@ use App\Services\IAppointmentService;
 
 final class AppointmentController extends ControllerBase
 {
-    public function __construct(private IAppointmentService $service) {}
+    public function __construct(private IAppointmentService $service)
+    {
+    }
 
     // =========================
     // CUSTOMER ROUTES
@@ -21,7 +23,7 @@ final class AppointmentController extends ControllerBase
         Middleware::requireCustomer();
 
         $userId = $this->currentUserId();
-        $appointments = $this->service->getUserAppointments((int)$userId);
+        $appointments = $this->service->getUserAppointments((int) $userId);
 
         $this->render('Appointment/Index', [
             'title' => 'My Appointments',
@@ -45,10 +47,18 @@ final class AppointmentController extends ControllerBase
         Middleware::requireCustomer();
         $this->validateCsrf();
 
-        $userId = (int)$this->currentUserId();
-        $slotId = (int)$this->input('slotId');
-        $designType = trim((string)$this->input('designType', '')) ?: null;
-        $notes = trim((string)$this->input('notes', '')) ?: null;
+        $userId = (int) $this->currentUserId();
+
+        $slotIdRaw = $this->input('slotId');
+        $slotId = (int) $slotIdRaw;
+
+        if ($slotId < 1) {
+            $this->redirect('/appointments/book?error=' . urlencode('Please select a valid time slot.'));
+            return;
+        }
+
+        $designType = trim((string) $this->input('designType', '')) ?: null;
+        $notes = trim((string) $this->input('notes', '')) ?: null;
 
         try {
             $id = $this->service->book($userId, $slotId, $designType, $notes);
@@ -63,12 +73,12 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
-        // View can call API to load available slots by date
-        $this->render('Appointments/Edit', [
+        $this->render('Appointment/Edit', [
             'title' => 'Update Appointment',
             'appointmentId' => $id
         ]);
     }
+
 
     public function updateSlot(int $id): void
     {
@@ -76,8 +86,8 @@ final class AppointmentController extends ControllerBase
         Middleware::requireCustomer();
         $this->validateCsrf();
 
-        $userId = (int)$this->currentUserId();
-        $newSlotId = (int)$this->input('slotId');
+        $userId = (int) $this->currentUserId();
+        $newSlotId = (int) $this->input('slotId');
 
         try {
             $this->service->updateAppointmentSlot($userId, $id, $newSlotId);
@@ -93,9 +103,9 @@ final class AppointmentController extends ControllerBase
         Middleware::requireCustomer();
         $this->validateCsrf();
 
-        $userId = (int)$this->currentUserId();
-        $designType = trim((string)$this->input('designType', '')) ?: null;
-        $notes = trim((string)$this->input('notes', '')) ?: null;
+        $userId = (int) $this->currentUserId();
+        $designType = trim((string) $this->input('designType', '')) ?: null;
+        $notes = trim((string) $this->input('notes', '')) ?: null;
 
         try {
             $this->service->updateAppointmentDetails($userId, $id, $designType, $notes);
@@ -111,7 +121,7 @@ final class AppointmentController extends ControllerBase
         Middleware::requireCustomer();
         $this->validateCsrf();
 
-        $userId = (int)$this->currentUserId();
+        $userId = (int) $this->currentUserId();
 
         try {
             $this->service->cancel($userId, $id);
@@ -127,8 +137,9 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
-        $date = (string)$this->input('date', '');
-        if (!$date) $this->jsonResponse(['error' => 'date_required'], 400);
+        $date = (string) $this->input('date', '');
+        if (!$date)
+            $this->jsonResponse(['error' => 'date_required'], 400);
 
         $slots = $this->service->getAvailableSlotsByDate($date);
 
@@ -162,9 +173,9 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAdmin();
         $this->validateCsrf();
 
-        $date = (string)$this->input('appointmentDate');
-        $start = (string)$this->input('startTime');
-        $end = (string)$this->input('endTime');
+        $date = (string) $this->input('appointmentDate');
+        $start = (string) $this->input('startTime');
+        $end = (string) $this->input('endTime');
 
         try {
             $this->service->adminAddSlot($date, $start, $end);
@@ -179,7 +190,7 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAdmin();
         $this->validateCsrf();
 
-        $status = AppointmentStatus::fromDb((string)$this->input('status'));
+        $status = AppointmentStatus::fromDb((string) $this->input('status'));
         $this->service->adminSetStatus($id, $status);
 
         $this->redirect('/admin/appointments?success=status_updated');

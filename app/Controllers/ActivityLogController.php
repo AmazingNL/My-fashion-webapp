@@ -6,12 +6,12 @@ namespace App\Controllers;
 
 use App\Core\ControllerBase;
 use App\Core\Middleware;
-use App\Services\ActivityLogService;
+use App\Services\IActivityLogService;
 
 class ActivityLogController extends ControllerBase
 {
     public function __construct(
-        private readonly ActivityLogService $logService
+        private readonly IActivityLogService $logService
     ) {}
 
     /**
@@ -58,7 +58,6 @@ class ActivityLogController extends ControllerBase
 
     /**
      * JSON endpoint for AJAX filters/pagination
-     * GET /admin/activity-logs/api?userId=&action=&from=&to=&page=
      */
     public function apiList(): void
     {
