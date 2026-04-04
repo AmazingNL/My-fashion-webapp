@@ -10,7 +10,7 @@
 1. Clone the project
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/AmazingNL/My-fashion-webapp.git
 cd My-fashion-webapp
 ```
 
