@@ -2,7 +2,6 @@
 -- Student: Amazinggrace Iruoma (726138)
 
 -- Drop existing tables if they exist (for clean setup)
-DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS password_reset_tokens;
 DROP TABLE IF EXISTS appointments;
 DROP TABLE IF EXISTS appointment_slots;
@@ -13,6 +12,7 @@ DROP TABLE IF EXISTS product_variants;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS users;
 
+--migrate up
 -- Users Table
 CREATE TABLE users (
     userId INT AUTO_INCREMENT PRIMARY KEY,
@@ -146,23 +146,6 @@ CREATE TABLE password_reset_tokens (
     FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
     INDEX idx_token (token),
     INDEX idx_user (userId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Activity Logs Table (for admin monitoring)
-CREATE TABLE activity_logs (
-    logId INT AUTO_INCREMENT PRIMARY KEY,
-    userId INT NULL,
-    action VARCHAR(255) NOT NULL,
-    entityType VARCHAR(100),
-    entityId INT NULL,
-    details TEXT,
-    ipAddress VARCHAR(45),
-    userAgent TEXT,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE SET NULL,
-    INDEX idx_user (userId),
-    INDEX idx_action (action),
-    INDEX idx_created (createdAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default admin user (password: Admin123!)

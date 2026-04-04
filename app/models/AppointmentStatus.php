@@ -9,8 +9,4 @@ enum AppointmentStatus: string
     case CANCELLED = 'CANCELLED';
     case COMPLETED = 'COMPLETED';
 
-    public static function fromDb(?string $value): self
-    {
-        return self::tryFrom(strtoupper((string)$value)) ?? self::PENDING;
-    }
 }

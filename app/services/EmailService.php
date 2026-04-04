@@ -279,9 +279,6 @@ class EmailService
         if (!$this->enabled) {
             return true; // Skip sending if disabled
         }
-
-        // For demonstration, we'll log the email instead of actually sending
-        // In production, use PHPMailer or similar
         $logDir = __DIR__ . '/../../storage/emails';
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);
@@ -290,15 +287,6 @@ class EmailService
         $filename = $logDir . '/' . date('Y-m-d_His') . '_' . md5($to . $subject) . '.html';
         $content = "To: {$to}\nSubject: {$subject}\n\n{$message}";
         file_put_contents($filename, $content);
-
-        // Uncomment this in production with proper mail configuration
-        /*
-        $headers = "MIME-Version: 1.0" . "\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        $headers .= "From: {$this->fromName} <{$this->fromEmail}>" . "\r\n";
-
-        return mail($to, $subject, $message, $headers);
-        */
 
         return true; // Return true for demonstration
     }

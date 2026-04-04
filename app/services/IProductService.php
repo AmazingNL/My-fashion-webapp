@@ -8,10 +8,8 @@ use App\Models\ProductVariant;
 interface IProductService
 {
     public function getActiveProducts(): array;
-    public function getProductDetails($id): array;
+    public function getProductDetails(int $id): array;
     public function getProductById($id): ?Product;
-    public function getSimilarProducts(int $productId, string $category, int $limit = 4): array;
-
     // Product admin
     public function updateProduct(Product $product): array;
     public function deleteProduct($id): array;

@@ -137,11 +137,11 @@
 }
 
 /* Field Styles - using main.css field styles */
-.field--full {
+.auth .field--full {
 	grid-column: 1 / -1;
 }
 
-.field input {
+.auth .field input {
 	width: 100%;
 	border: 0;
 	outline: 0;
@@ -151,7 +151,7 @@
 	font-size: 15px;
 }
 
-.field label {
+.auth .field label {
 	position: absolute;
 	left: 14px;
 	top: 14px;
@@ -163,15 +163,15 @@
 }
 
 /* Floating labels */
-.field input:focus + label,
-.field input:not(:placeholder-shown) + label {
+.auth .field input:focus + label,
+.auth .field input:not(:placeholder-shown) + label {
 	top: 8px;
 	opacity: 0.86;
 	transform: scale(0.92);
 }
 
 /* Password toggle button */
-.field__toggle {
+.auth .field__toggle {
 	position: absolute;
 	right: 10px;
 	top: 10px;
@@ -185,7 +185,7 @@
 		border-color 0.15s ease;
 }
 
-.field__toggle:hover {
+.auth .field__toggle:hover {
 	transform: translateY(-1px);
 	background: rgba(212, 115, 94, 0.15);
 	border-color: var(--afro-terracotta);

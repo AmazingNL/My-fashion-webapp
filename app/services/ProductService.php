@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Repositories\IProductRepository;
+use Exception;
 
 class ProductService implements IProductService
 {
@@ -16,57 +17,26 @@ class ProductService implements IProductService
     }
 
 
-    public function getProductDetails($id): array
+    public function getProductDetails(int $id): array
     {
-        try {
-            $product = $this->requireProduct($id);
-            $variants = $this->requireVariants($id, $product);
-            [$sizes, $colors] = $this->extractSizesColors($variants);
-
-            return $this->detailsPayload($product, $variants, $sizes, $colors);
-        } catch (\RuntimeException $e) {
-            return $this->detailsPayload(null, [], [], [], ['Product not found']);
-        } catch (\InvalidArgumentException $e) {
-            return $this->detailsPayload($product ?? null, [], [], [], ['This product has no size/color options available']);
-        } catch (\Throwable $e) {
-            return $this->detailsFail();
-        }
+        return $this->productRepository->getProductDetailsById($id);
     }
 
 
     public function getActiveProducts(): array
     {
-        try {
-            return $this->productRepository->getAllActive();
-        } catch (\Exception $e) {
-            error_log("Failed to get active products: " . $e->getMessage());
-            return [];
-        }
+        return $this->productRepository->getAllActive();
     }
 
-    public function getSimilarProducts(int $productId, string $category, int $limit = 4): array
-    {
-        try {
-            return $this->productRepository->findSimilarProducts($productId, $category, $limit);
-        } catch (\Throwable $e) {
-            error_log("Failed to fetch similar products: " . $e->getMessage());
-            return [];
-        }
-    }
 
     public function toggleFavourite($productId): array
     {
-        if ($productId <= 0)
-            return ['error' => 'Invalid product ID'];
-
         $session = $_SESSION['favourites'] ??= [];
-
         if (isset($session[$productId])) {
             unset($session[$productId]);
             $_SESSION['favourites'] = $session;
             return ['productId' => $productId, 'favourited' => false];
         }
-
         $session[$productId] = true;
         $_SESSION['favourites'] = $session;
         return ['productId' => $productId, 'favourited' => true];
@@ -92,14 +62,9 @@ class ProductService implements IProductService
 
     public function getProductById($id): ?Product
     {
-        try {
-            return $this->productRepository->getProductById($id);
-        } catch (\Exception $e) {
-            error_log("Failed to get product by ID: " . $e->getMessage());
-            return null;
-        }
-    }
+        return $this->productRepository->getProductById((int) $id);
 
+    }
 
 
     public function createProductWithVariants(Product $product, array $variantsInput): array
@@ -120,7 +85,7 @@ class ProductService implements IProductService
 
             foreach ($rows as $row) {
                 $variant = new ProductVariant(
-                    null,
+                    0,
                     $productId,
                     $row['size'],
                     $row['colour'],
@@ -149,7 +114,9 @@ class ProductService implements IProductService
             if (!empty($errors))
                 return ['error' => implode(' ', $errors)];
 
-            $this->productRepository->update($product);
+            if (!$this->productRepository->update($product)) {
+                return ['error' => 'Product not found or not updated'];
+            }
             return ['success' => 'Product updated successfully'];
         } catch (\Throwable $e) {
             error_log("Failed to update product: " . $e->getMessage());
@@ -165,7 +132,9 @@ class ProductService implements IProductService
                 return ['error' => 'Product not found'];
 
             // IMPORTANT: your repository delete() should deactivate by productId
-            $this->productRepository->delete((int) $id);
+            if (!$this->productRepository->delete((int) $id)) {
+                return ['error' => 'Product not found or already inactive'];
+            }
 
             return ['success' => 'Product deleted successfully'];
         } catch (\Throwable $e) {
@@ -195,7 +164,7 @@ class ProductService implements IProductService
             return ['error' => implode(' ', $errors)];
 
         try {
-            $product = $this->productRepository->getProductById($variant->getProductId());
+            $product = $this->productRepository->getProductById($variant->productId);
             if (!$product)
                 return ['error' => 'Product not found'];
 
@@ -217,13 +186,14 @@ class ProductService implements IProductService
         float $price
     ): array {
         $variant = $this->productRepository->getVariantById($variantId);
-        if (!$variant)
+        if (!$variant) {
             return ['error' => 'Variant not found'];
+        }
 
         // If your ProductVariant model does NOT have price, keep it 0 or ignore it
         $v = new ProductVariant(
             $variantId,
-            (int) $variant->getProductId(),
+            (int) $variant->productId,
             $size,
             $colour,
             $stockQuantity
@@ -232,7 +202,6 @@ class ProductService implements IProductService
         return $this->updateVariant($v);
     }
 
-    // Wrapper so controllers can call createVariant(productId, size, colour, stock, price)
     public function createVariantByFields(
         int $productId,
         string $size,
@@ -240,33 +209,24 @@ class ProductService implements IProductService
         int $stockQuantity,
         float $price
     ): array {
-        $v = new ProductVariant(
-            null,
-            $productId,
-            $size,
-            $colour,
-            $stockQuantity
-        );
-
-        return $this->addVariantToProduct($v);
+        return $this->addVariantToProduct(new ProductVariant(0, $productId, $size, $colour, $stockQuantity));
     }
 
     public function updateVariant(ProductVariant $variant): array
     {
-        if ($variant->getVariantId() === null)
+        if ($variant->variantId <= 0) {
             return ['error' => 'VariantId is required'];
+        }
 
         $errors = $this->validateVariant($variant);
-        if (!empty($errors))
+        if (!empty($errors)) {
             return ['error' => implode(' ', $errors)];
+        }
 
         try {
-            $existing = $this->productRepository->getVariantById((int) $variant->getVariantId());
-            if (!$existing)
-                return ['error' => 'Variant not found'];
-
-            // Repo must implement updateVariant(ProductVariant $variant)
-            $this->productRepository->updateVariant($variant);
+            if (!$this->productRepository->updateVariant($variant)) {
+                return ['error' => 'Variant not found or not updated'];
+            }
 
             return ['success' => 'Variant updated successfully'];
         } catch (\Throwable $e) {
@@ -278,12 +238,9 @@ class ProductService implements IProductService
     public function deleteVariant(int $variantId): array
     {
         try {
-            $existing = $this->productRepository->getVariantById($variantId);
-            if (!$existing)
-                return ['error' => 'Variant not found'];
-
-            // Repo must implement deleteVariant(int $variantId)
-            $this->productRepository->deleteVariant($variantId);
+            if (!$this->productRepository->deleteVariant($variantId)) {
+                return ['error' => 'Variant not found or already deleted'];
+            }
 
             return ['success' => 'Variant deleted successfully'];
         } catch (\Throwable $e) {
@@ -292,19 +249,15 @@ class ProductService implements IProductService
         }
     }
 
-    /* =========================
-        Private helpers
-       ========================= */
-
     private function validateProduct(Product $product): array
     {
         $errors = [];
 
-        if (trim((string) $product->getName()) === '')
+        if (trim((string) $product->productName) === '')
             $errors[] = 'Name is required.';
-        if ((float) $product->getPrice() <= 0)
+        if ((float) $product->price <= 0)
             $errors[] = 'Price must be greater than 0.';
-        if ((int) $product->getStock() < 0)
+        if ((int) $product->stock < 0)
             $errors[] = 'Stock cannot be negative.';
 
         return $errors;
@@ -350,67 +303,29 @@ class ProductService implements IProductService
     {
         $errors = [];
 
-        if ($variant->getProductId() <= 0)
+        if ($variant->productId <= 0) {
             $errors[] = 'Variant productId is invalid.';
-        if (trim((string) $variant->getSize()) === '')
+        }
+        if (trim((string) $variant->size) === '') {
             $errors[] = 'Variant size is required.';
-        if (trim((string) $variant->getColour()) === '')
+        }
+        if (trim((string) $variant->colour) === '') {
             $errors[] = 'Variant colour is required.';
-        if ((int) $variant->getStockQuantity() < 0)
+        }
+        if ((int) $variant->stockQuantity < 0) {
             $errors[] = 'Variant stockQuantity cannot be negative.';
+        }
 
         return $errors;
     }
-
-    private function detailsPayload($product, array $variants, array $sizes, array $colors, array $errors = []): array
-    {
-        return [
-            'product' => $product,
-            'variants' => $variants,
-            'sizes' => $sizes,
-            'colors' => $colors,
-            'errors' => $errors,
-        ];
-    }
-
-    private function detailsFail(): array
-    {
-        return $this->detailsPayload(null, [], [], [], ['Failed to retrieve product details']);
-    }
-
-    private function requireProduct($id)
-    {
-        $product = $this->productRepository->getProductById($id);
-        if ($product)
-            return $product;
-
-        error_log("Product with ID $id not found");
-        return null; // keep flow consistent with your original contract
-    }
-
-    private function requireVariants($id, $product): array
-    {
-        if (!$product) {
-            throw new \RuntimeException('PRODUCT_NOT_FOUND');
-        }
-
-        $variants = $this->productRepository->getVariantsByProductId($id);
-        if (!empty($variants)) {
-            return $variants;
-        }
-
-        error_log("WARNING: Product ID $id has no variants");
-        throw new \InvalidArgumentException('NO_VARIANTS');
-    }
-
 
     private function extractSizesColors(array $variants): array
     {
         $sizes = $colors = [];
 
         foreach ($variants as $v) {
-            $size = is_object($v) ? $v->getSize() : (string) ($v['size'] ?? '');
-            $colour = is_object($v) ? $v->getColour() : (string) ($v['colour'] ?? ($v['color'] ?? ''));
+            $size = is_object($v) ? (string) ($v->size ?? '') : (string) ($v['size'] ?? '');
+            $colour = is_object($v) ? (string) ($v->colour ?? ($v->color ?? '')) : (string) ($v['colour'] ?? ($v['color'] ?? ''));
 
             if ($size !== '')
                 $sizes[$size] = true;

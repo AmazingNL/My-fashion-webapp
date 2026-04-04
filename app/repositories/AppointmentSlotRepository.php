@@ -56,23 +56,24 @@ final class AppointmentSlotRepository extends RepositoryBase implements IAppoint
             VALUES (:d, :s, :e, :a)
         ");
         $stmt->execute([
-            ':d' => $slot->getAppointmentDate(),
-            ':s' => $slot->getStartTime(),
-            ':e' => $slot->getEndTime(),
-            ':a' => $slot->isAvailable() ? 1 : 0,
+                ':d' => $slot->appointmentDate,
+                ':s' => $slot->startTime,
+                ':e' => $slot->endTime,
+                ':a' => $slot->isAvailable ? 1 : 0,
         ]);
 
         return (int)$this->getConnection()->lastInsertId();
     }
 
-    public function setAvailability(int $slotId, bool $available): void
+    public function setAvailability(int $slotId, bool $available): bool
     {
         $stmt = $this->getConnection()->prepare("
             UPDATE appointment_slots
             SET isAvailable = :a
             WHERE slotId = :id
         ");
-        $stmt->execute([':a' => $available ? 1 : 0, ':id' => $slotId]);
+            $stmt->execute([':a' => $available ? 1 : 0, ':id' => $slotId]);
+            return $stmt->rowCount() > 0;
     }
 
     public function lockAvailableSlotForUpdate(int $slotId): ?array

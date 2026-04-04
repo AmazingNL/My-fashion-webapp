@@ -6,27 +6,37 @@ use App\Core\RepositoryBase;
 use App\Models\Appointment;
 use App\Models\AppointmentStatus;
 use PDO;
+use RuntimeException;
 
 final class AppointmentRepository extends RepositoryBase implements IAppointmentRepository
 {
     public function getAll(): array
     {
+        try {
         return $this->getConnection()
             ->query("SELECT * FROM appointments ORDER BY appointmentId DESC")
             ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to load appointments: ' . $e->getMessage());
+        }
     }
 
     public function countByStatus(AppointmentStatus $status): int
     {
+        try {
         $stmt = $this->getConnection()->prepare(
             "SELECT COUNT(*) FROM appointments WHERE status = :status"
         );
         $stmt->execute([':status' => $status->value]);
         return (int) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to count appointments by status: ' . $e->getMessage());
+        }
     }
 
     public function getAllWithSlot(): array
     {
+        try {
         $sql = "
             SELECT 
                 a.*,
@@ -36,19 +46,15 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
             ORDER BY a.appointmentId DESC
         ";
         return $this->getConnection()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to load appointments with slots: ' . $e->getMessage());
+        }
     }
 
-    public function findRawById(int $id): ?Appointment
-    {
-        $stmt = $this->getConnection()->prepare("SELECT * FROM appointments WHERE appointmentId = :id");
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ? $this->mapToAppointment($row) : null;
-    }
 
     public function findById(int $id): ?array
     {
+        try {
         $sql = "
             SELECT 
                 a.*,
@@ -63,10 +69,14 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to find appointment: ' . $e->getMessage());
+        }
     }
 
     public function findByUserId(int $userId): array
     {
+        try {
         $sql = "
             SELECT 
                 a.*,
@@ -79,40 +89,53 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([':userId' => $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to find user appointments: ' . $e->getMessage());
+        }
     }
 
     public function create(Appointment $appointment): int
     {
+        try {
         $sql = "
             INSERT INTO appointments (userId, slotId, designType, notes, status)
             VALUES (:userId, :slotId, :designType, :notes, :status)
         ";
         $stmt = $this->getConnection()->prepare($sql);
         $stmt->execute([
-            ':userId' => $appointment->getUserId(),
-            ':slotId' => $appointment->getSlotId(),
-            ':designType' => $appointment->getDesignType(),
-            ':notes' => $appointment->getNotes(),
-            ':status' => $appointment->getStatus()->value,
+            ':userId' => $appointment->userId,
+            ':slotId' => $appointment->slotId,
+            ':designType' => $appointment->designType,
+            ':notes' => $appointment->notes,
+            ':status' => $appointment->status->value,
         ]);
 
         return (int) $this->getConnection()->lastInsertId();
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to create appointment: ' . $e->getMessage());
+        }
     }
 
-    public function updateSlot(int $appointmentId, int $slotId): void
+    public function updateSlot(int $appointmentId, int $slotId): bool
     {
+        try {
         $stmt = $this->getConnection()->prepare("
-            UPDATE appointments 
+            UPDATE appointments
             SET slotId = :slotId
             WHERE appointmentId = :id
         ");
         $stmt->execute([':slotId' => $slotId, ':id' => $appointmentId]);
+        return $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to update appointment slot: ' . $e->getMessage());
+        }
     }
 
-    public function updateDetails(int $appointmentId, ?string $designType, ?string $notes): void
+    public function updateDetails(int $appointmentId, ?string $designType, ?string $notes): bool
     {
+        try {
         $stmt = $this->getConnection()->prepare("
-            UPDATE appointments
+            UPDATE appointments 
             SET designType = :designType, notes = :notes
             WHERE appointmentId = :id
         ");
@@ -121,26 +144,41 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
             ':notes' => $notes,
             ':id' => $appointmentId
         ]);
+        return $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to update appointment details: ' . $e->getMessage());
+        }
     }
 
-    public function setStatus(int $appointmentId, AppointmentStatus $status): void
+    public function setStatus(int $appointmentId, AppointmentStatus $status): bool
     {
+        try {
         $stmt = $this->getConnection()->prepare("
-            UPDATE appointments 
+            UPDATE appointments
             SET status = :status
             WHERE appointmentId = :id
         ");
         $stmt->execute([':status' => $status->value, ':id' => $appointmentId]);
+        return $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to set appointment status: ' . $e->getMessage());
+        }
     }
 
-    public function delete(int $appointmentId): void
+    public function delete(int $appointmentId): bool
     {
+        try {
         $stmt = $this->getConnection()->prepare("DELETE FROM appointments WHERE appointmentId = :id");
         $stmt->execute([':id' => $appointmentId]);
+        return $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to delete appointment: ' . $e->getMessage());
+        }
     }
 
     public function autoCancelPastAppointments(): int
     {
+        try {
         // cancels if appointmentDate < today OR (today and endTime < now)
         $sql = "
             UPDATE appointments a
@@ -153,19 +191,9 @@ final class AppointmentRepository extends RepositoryBase implements IAppointment
               )
         ";
         return $this->getConnection()->exec($sql) ?: 0;
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Failed to auto-cancel past appointments: ' . $e->getMessage());
+        }
     }
 
-    private function mapToAppointment(array $row): Appointment
-    {
-        return new Appointment(
-            (int) $row['appointmentId'],
-            (int) $row['userId'],
-            (int) $row['slotId'],
-            $row['designType'] ?? null,
-            $row['notes'] ?? null,
-            AppointmentStatus::fromDb($row['status'] ?? null),
-            $row['createdAt'] ?? null,
-            $row['updatedAt'] ?? null
-        );
-    }
 }

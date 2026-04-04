@@ -4,19 +4,33 @@ namespace App\Models;
 
 class Product
 {
-    private $productId;
-    private $productName;
-    private $description;
-    private float $price;
-    private $category;
-    private $stock;
-    private $image;
-    private $createdAt;
-    private $updatedAt;
-    private $isActive;
+    public ?int $productId = null;
+    public string $productName = '';
+    public string $description = '';
+    public float $price = 0.0;
+    public string $category = '';
+    public int $stock = 0;
+    public string $image = '';
+    public ?string $createdAt = null;
+    public ?string $updatedAt = null;
+    public bool $isActive = true;
 
-    public function __construct($productId, $productName, $description, $price, $category, $stock, $image, $createdAt, $updatedAt, $isActive)
-    {
+    public function __construct(
+        ?int $productId = null,
+        string $productName = '',
+        string $description = '',
+        float $price = 0.0,
+        string $category = '',
+        int $stock = 0,
+        string $image = '',
+        \DateTimeInterface|string|null $createdAt = null,
+        \DateTimeInterface|string|null $updatedAt = null,
+        bool $isActive = true
+    ) {
+        if (func_num_args() === 0) {
+            return;
+        }
+
         $this->productId = $productId;
         $this->productName = $productName;
         $this->description = $description;
@@ -24,61 +38,9 @@ class Product
         $this->category = $category;
         $this->stock = $stock;
         $this->image = $image;
-        $this->createdAt = null;
-        $this->updatedAt = null;
-        $this->isActive = true;
-    }
-
-    public function getId()
-    {
-        return $this->productId;
-    }
-
-    public function getName()
-    {
-        return $this->productName;
-    }
-
-    public function getDescription()
-    {
-        return $this->description;
-    }
-
-    public function getStock()
-    {
-        return $this->stock;
-    }
-
-    public function getPrice()
-    {
-        return $this->price;
-    }
-
-    public function getCategory()
-    {
-        return $this->category;
-    }
-
-    public function getImage()
-    {
-        return $this->image;
-    }
-
-    public function setImage($image)
-    {
-        $this->image = $image;
-    }
-    public function getCreatedAt()
-    {
-        return $this->createdAt;
-    }
-    public function getUpdatedAt()
-    {
-        return $this->updatedAt;
-    }
-    public function isActive()
-    {
-        return $this->isActive;
+        $this->createdAt = $createdAt instanceof \DateTimeInterface ? $createdAt->format('Y-m-d H:i:s') : $createdAt;
+        $this->updatedAt = $updatedAt instanceof \DateTimeInterface ? $updatedAt->format('Y-m-d H:i:s') : $updatedAt;
+        $this->isActive = $isActive;
     }
 
 

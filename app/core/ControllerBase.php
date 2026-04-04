@@ -23,32 +23,21 @@ abstract class ControllerBase
     }
 
 
-    protected function redirect(string $url): void
+    protected function redirect(string $to, $status = 302): void
     {
-        if (headers_sent($file, $line)) {
-            error_log("Redirect blocked: headers already sent in $file:$line");
-            return; 
+        $statusCode = (int) $status;
+        if (!headers_sent()) {
+            header('Location: ' . $to, true, $statusCode);
+            exit;
         }
-        header("Location: $url");
-        exit;
     }
 
     protected function jsonResponse($data, int $statusCode = 200): void
     {
-        if (headers_sent($file, $line)) {
-            error_log("JSON blocked: headers already sent in $file:$line");
-            // Echo JSON without headers, or just exit
-        }
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($data, JSON_THROW_ON_ERROR);
         exit;
-    }
-
-
-    protected function isPostRequest(): bool
-    {
-        return ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
     }
 
     protected function input(string $key, $default = null)
@@ -92,7 +81,6 @@ protected function validateCsrf(): void
     }
 }
 
-
     protected function csrfField(): string
     {
         $token = htmlspecialchars($this->csrfToken(), ENT_QUOTES, 'UTF-8');
@@ -105,5 +93,37 @@ protected function validateCsrf(): void
         return isset($_SESSION['userId']) ? (int) $_SESSION['userId'] : null;
     }
 
+    /**
+     * Generic flash message setter - use a key to distinguish different message types
+     */
+    protected function setFlash(string $key, string $message, string $type = 'success'): void
+    {
+        $this->ensureSession();
+        $_SESSION[$key . '_flash'] = [
+            'message' => $message,
+            'type' => $type,
+        ];
+    }
+
+    /**
+     * Generic flash message consumer - retrieves and clears the flash for the given key
+     */
+    protected function consumeFlash(string $key = 'default'): array
+    {
+        $this->ensureSession();
+        $flashKey = $key . '_flash';
+        
+        if (!isset($_SESSION[$flashKey])) {
+            return ['', ''];
+        }
+
+        $flash = $_SESSION[$flashKey];
+        unset($_SESSION[$flashKey]);
+
+        $success = ($flash['type'] ?? '') === 'success' ? ($flash['message'] ?? '') : '';
+        $error = ($flash['type'] ?? '') === 'error' ? ($flash['message'] ?? '') : '';
+
+        return [$success, $error];
+    }
 
 }

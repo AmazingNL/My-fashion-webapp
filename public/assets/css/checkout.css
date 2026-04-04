@@ -1,5 +1,27 @@
 @import url("/assets/css/main.css"); /* uses your shared design system :contentReference[oaicite:5]{index=5} */
 
+/* Ensure checkout fields are not affected by floating-label styles from other pages */
+.checkout .field label,
+.checkout .field span {
+	position: static;
+	display: block;
+	margin-bottom: 6px;
+	transform: none;
+	pointer-events: auto;
+	background: transparent;
+	padding: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	line-height: 1.35;
+}
+
+.checkout .field textarea,
+.checkout .field select,
+.checkout .field input {
+	margin-top: 0;
+}
+
 .checkout {
 	max-width: 1200px;
 	margin: 0 auto;

@@ -6,127 +6,86 @@ namespace App\Controllers;
 
 use App\Core\ControllerBase;
 use App\Core\Middleware;
-use App\Services\IProductService;
 use App\Models\Product;
-use App\Services\IUserService;
-use App\Services\IActivityLogService;
-use App\Services\IOrderService;
 use App\Services\IAppointmentService;
+use App\Services\IOrderService;
+use App\Services\IProductService;
+use App\Services\IUserService;
+use RuntimeException;
 
-class AdminController extends ControllerBase 
+class AdminController extends ControllerBase
 {
     private IProductService $productService;
     private IUserService $userService;
-    private IActivityLogService $logService;
     private IOrderService $orderService;
     private IAppointmentService $appointmentService;
 
     public function __construct(
         IProductService $productService,
         IUserService $userService,
-        IActivityLogService $logService,
         IOrderService $orderService,
         IAppointmentService $appointmentService
     ) {
         $this->productService = $productService;
         $this->userService = $userService;
-        $this->logService = $logService;
         $this->orderService = $orderService;
         $this->appointmentService = $appointmentService;
     }
 
-    /**
-     * Admin Dashboard - Main page with statistics
-     */
     public function dashboard(): void
     {
         Middleware::requireAdmin();
 
-        $products = $this->productService->getActiveProducts();
-        $users = $this->userService->getAllUsers();
-
         $stats = [
-            'totalProducts' => count($products),
-            'totalUsers' => count($users),
-            'totalOrders' => $this->getOrdersCount(),
-            'pendingAppointments' => $this->getPendingAppointmentsCount(),
-            'recentActivities' => $this->logService->getLogs(5),
+            'totalProducts' => count($this->productService->getActiveProducts()),
+            'totalUsers' => count($this->userService->getAllUsers()),
+            'totalOrders' => $this->orderService->countAllOrders(),
+            'pendingAppointments' => $this->appointmentService->countPending(),
+            'recentActivities' => [],
         ];
 
         $this->render('Admin/Dashboard', [
             'title' => 'Admin Dashboard',
-            'stats' => $stats
+            'stats' => $stats,
         ], 'admin');
     }
 
-
-    /**
-     * Products Management Page
-     */
     public function manageProducts(): void
     {
         Middleware::requireAdmin();
-
-        $products = $this->productService->getActiveProducts();
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Viewed Products Management',
-            'admin',
-            null,
-            'Products management page accessed'
-        );
+        [$success, $error] = $this->consumeFlash('admin');
 
         $this->render('Admin/ManageProducts', [
             'title' => 'Manage Products',
-            'products' => $products
+            'products' => $this->productService->getActiveProducts(),
+            'success' => $success,
+            'error' => $error,
         ], 'admin');
     }
 
-    /**
-     * Users Management Page
-     */
     public function manageUsers(): void
     {
         Middleware::requireAdmin();
-
-        $users = $this->userService->getAllUsers();
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Viewed Users Management',
-            'admin',
-            null,
-            'Users management page accessed'
-        );
+        [$success, $error] = $this->consumeFlash('admin');
 
         $this->render('Admin/ManageUsers', [
             'title' => 'Manage Users',
-            'users' => $users
+            'users' => $this->userService->getAllUsers(),
+            'success' => $success,
+            'error' => $error,
         ], 'admin');
     }
 
-    /**
-     * Orders Management Page
-     */
     public function manageOrders(): void
     {
         Middleware::requireAdmin();
-
-        // get all orders 
-        $orders = $this->orderService->getAllOrders();
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Viewed Orders Management',
-            'admin',
-            null,
-            'Orders management page accessed'
-        );
+        [$success, $error] = $this->consumeFlash('admin');
 
         $this->render('Admin/ManageOrders', [
             'title' => 'Manage Orders',
-            'orders' => $orders
+            'orders' => $this->orderService->getAllOrders(),
+            'success' => $success,
+            'error' => $error,
         ], 'admin');
     }
 
@@ -158,297 +117,140 @@ class AdminController extends ControllerBase
         ], 'admin');
     }
 
-
-
-    /**
-     * Appointments Management Page
-     */
-    public function manageAppointments(): void
-    {
-        Middleware::requireAdmin();
-
-        // This will be implemented with the Appointment repository
-        $appointments = []; // Placeholder
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Viewed Appointments Management',
-            'admin',
-            null,
-            'Appointments management page accessed'
-        );
-
-        $this->render('Admin/ManageAppointments', [
-            'title' => 'Manage Appointments',
-            'appointments' => $appointments
-        ], 'admin');
-    }
-
-    /**
-     * View Activity Logs
-     */
-    public function viewLogs(): void
-    {
-        Middleware::requireAdmin();
-
-        $page = max(1, (int) $this->input('page', 1));
-        $limit = 50;
-        $offset = ($page - 1) * $limit;
-
-        $userId = $this->input('userId');
-        $userId = ($userId !== null && $userId !== '') ? (int) $userId : null;
-
-        $action = trim((string) $this->input('action', ''));
-        $action = $action !== '' ? $action : null;
-
-        $from = trim((string) $this->input('from', ''));
-        $from = $from !== '' ? $from : null;
-
-        $to = trim((string) $this->input('to', ''));
-        $to = $to !== '' ? $to : null;
-
-        $logs = $this->logService->getLogs($limit, $offset, $userId, $action, $from, $to);
-        $total = $this->logService->countLogs($userId, $action, $from, $to);
-        $pages = (int) ceil(max(1, $total) / $limit);
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Viewed Activity Logs',
-            'admin',
-            null,
-            "Filters: userId=" . ($userId ?? 'any') . ", action=" . ($action ?? 'any') .
-            ", from=" . ($from ?? 'any') . ", to=" . ($to ?? 'any') . ", page={$page}"
-        );
-
-        $this->render('Admin/ActivityLogs', [
-            'title' => 'Activity Logs',
-            'logs' => $logs,
-            'page' => $page,
-            'pages' => max(1, $pages),
-            'total' => $total,
-            'filters' => [
-                'userId' => $userId,
-                'action' => $action,
-                'from' => $from,
-                'to' => $to,
-            ],
-        ], 'admin');
-    }
-
-
-    /**
-     * Export Activity Logs
-     */
-    public function exportLogs(): void
-    {
-        Middleware::requireAdmin();
-
-        $filepath = $this->logService->exportLogsToFile();
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Exported Activity Logs',
-            'admin',
-            null,
-            'Activity logs exported to file'
-        );
-
-        // Provide download
-        if (file_exists($filepath)) {
-            header('Content-Type: text/plain');
-            header('Content-Disposition: attachment; filename="' . basename($filepath) . '"');
-            header('Content-Length: ' . filesize($filepath));
-            readfile($filepath);
-            exit;
-        } else {
-            $this->jsonResponse(['error' => 'File not found'], 404);
-        }
-    }
-
-    /**
-     * Update User Status (activate/deactivate)
-     */
-    public function updateUserStatus(): void
+    public function deleteUser(): void
     {
         Middleware::requireAdmin();
         $this->validateCsrf();
 
         $userId = (int) $this->input('userId', 0);
-        $isActive = (bool) $this->input('isActive', false);
 
-        $result = $this->userService->updateUserStatus($userId, $isActive);
-
-        if ($result) {
-            $this->logService->log(
-                $this->currentUserId(),
-                'Updated User Status',
-                'user',
-                $userId,
-                "User status changed to: " . ($isActive ? 'active' : 'inactive')
-            );
-
-            $this->jsonResponse(['success' => true, 'message' => 'User status updated']);
-        } else {
-            $this->jsonResponse(['success' => false, 'message' => 'Failed to update user'], 400);
+        if ($userId <= 0) {
+            $this->setAdminFlash('Invalid user id.', 'error');
+            $this->redirect('/admin/users');
+            return;
         }
+
+        $user = $this->userService->getUserById($userId);
+        if (!$user) {
+            $this->setAdminFlash('User not found.', 'error');
+            $this->redirect('/admin/users');
+            return;
+        }
+
+        if (strtolower((string) ($user->role ?? '')) === 'admin') {
+            $this->setAdminFlash('Admin users cannot be deleted.', 'error');
+            $this->redirect('/admin/users');
+            return;
+        }
+
+        $ok = $this->userService->deleteUser($userId);
+        if ($ok) {
+            $this->setAdminFlash('User deleted successfully.', 'success');
+        } else {
+            $this->setAdminFlash('Failed to delete user.', 'error');
+        }
+
+        $this->redirect('/admin/users');
     }
 
-    /**
-     * Delete Product
-     */
     public function deleteProduct(): void
     {
         Middleware::requireAdmin();
         $this->validateCsrf();
 
         $productId = (int) $this->input('productId', 0);
-
-        $result = $this->productService->deleteProduct($productId);
-
-        if (isset($result['success'])) {
-            $this->logService->log(
-                $this->currentUserId(),
-                'Deleted Product',
-                'product',
-                $productId,
-                'Product deleted'
-            );
-
-            $this->jsonResponse(['success' => true, 'message' => $result['success']]);
+        if ($productId <= 0) {
+            $this->setFlash('admin', 'Invalid product id.', 'error');
+            $this->redirect('/admin/products');
             return;
         }
 
-        $this->jsonResponse([
-            'success' => false,
-            'message' => $result['error'] ?? 'Failed to delete product'
-        ], 400);
-    }
+        $result = $this->productService->deleteProduct($productId);
+        if (!empty($result['success'])) {
+            $this->setAdminFlash((string) $result['success'], 'success');
+        } else {
+            $this->setAdminFlash((string) ($result['error'] ?? 'Failed to delete product.'), 'error');
+        }
 
+        $this->redirect('/admin/products');
+    }
 
     public function addProductForm(): void
     {
-        // Render the add product form (implementation depends on your templating system)
-        $this->render(
-            'Admin/AddProductForm',
-            ['title' => 'Add Product',],
-            'admin'
-        );
+        Middleware::requireAdmin();
+        [$success, $error] = $this->consumeAdminFlash();
+
+        $this->render('Admin/AddProductForm', [
+            'title' => 'Add Product',
+            'success' => $success,
+            'error' => $error,
+        ], 'admin');
     }
+
     public function addProduct(): void
     {
         Middleware::requireAdmin();
         $this->validateCsrf();
 
-        // Extract path and error from the array
         [$imagePath, $imageError] = $this->saveUploadedProductImage($_FILES['image'] ?? []);
-
-        // Check for upload errors
         if ($imageError !== null) {
-            $this->jsonResponse(['errors' => [$imageError]], 400);
+            $this->setAdminFlash($imageError, 'error');
+            $this->redirect('/admin/addProductForm');
             return;
         }
 
         $product = new Product(
             null,
-            trim($this->input('name', '')),
-            trim($this->input('description', '')),
+            trim((string) $this->input('name', '')),
+            trim((string) $this->input('description', '')),
             (float) $this->input('price', 0.0),
-            trim($this->input('category', '')),
+            trim((string) $this->input('category', '')),
             (int) $this->input('stock', 0),
-            $imagePath, // <- Now just the string path, not the array
+            $imagePath,
             null,
             null,
             true
         );
 
         $variants = $this->input('variants', []);
+
         try {
             $result = $this->productService->createProductWithVariants($product, $variants);
-
             if (!empty($result['errors'])) {
-                $this->jsonResponse(['errors' => $result['errors']], 400);
+                $this->setFlash('admin', (string) implode(' | ', (array) $result['errors']), 'error');
+                $this->redirect('/admin/addProductForm');
                 return;
             }
 
-            $this->jsonResponse(['message' => 'Product + variants added successfully'], 201);
-            return;
+            $this->setFlash('admin', 'Product and variants added successfully.', 'success');
+            $this->redirect('/admin/products');
         } catch (\Throwable $e) {
-            $this->jsonResponse(['errors' => ['An unexpected error occurred.']], 500);
-            return;
+            $this->setFlash('admin', 'An unexpected error occurred.', 'error');
+            $this->redirect('/admin/addProductForm');
         }
     }
 
-    private function saveUploadedProductImage(array $file): array
-    {
-
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE)
-            return [null, null]; // image optional
-
-        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-            return [null, 'File exceeds upload_max_filesize'];
-        }
-
-        $maxBytes = 5 * 1024 * 1024;
-        if (($file['size'] ?? 0) > $maxBytes)
-            return [null, 'Image must be 5MB or smaller.'];
-
-        $tmp = $file['tmp_name'] ?? '';
-        if ($tmp === '' || !is_uploaded_file($tmp))
-            return [null, 'Invalid uploaded file.'];
-
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($tmp);
-
-        $allowed = [
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-        ];
-        if (!isset($allowed[$mime]))
-            return [null, 'Only JPG, PNG, or WEBP images are allowed.'];
-
-        $dirFs = __DIR__ . '/../../Public/images/products';
-        if (!is_dir($dirFs) && !mkdir($dirFs, 0755, true))
-            return [null, 'Could not create image folder.'];
-
-        $name = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
-        $destFs = $dirFs . '/' . $name;
-
-        if (!move_uploaded_file($tmp, $destFs))
-            return [null, 'Could not save uploaded image.'];
-
-        return ['/images/products/' . $name, null];
-    }
-
-    /**
-     * GET /admin/products/edit/{id}
-     */
     public function editProductForm(string $id): void
     {
         Middleware::requireAdmin();
 
         $productId = (int) $id;
-
         $product = $this->productService->getProductById($productId);
+
         if (!$product) {
-            $this->redirect('/admin/products?error=product_not_found');
+            $this->setFlash('admin', 'Product not found.', 'error');
+            $this->redirect('/admin/products');
             return;
         }
 
-        $variants = $this->productService->getVariantsByProductId($productId);
-
-        $this->logService->log(
-            $this->currentUserId(),
-            'Opened Product Edit Form',
-            'product',
-            $productId,
-            'Edit form opened'
-        );
+        [$success, $error] = $this->consumeFlash('admin');
 
         $this->render('Admin/EditProduct', [
             'title' => 'Edit Product',
             'product' => $product,
-            'variants' => $variants
+            'variants' => $this->productService->getVariantsByProductId($productId),
+            'success' => $success,
+            'error' => $error,
         ], 'admin');
     }
 
@@ -457,70 +259,122 @@ class AdminController extends ControllerBase
         Middleware::requireAdmin();
         $this->validateCsrf();
 
-        $productId = $this->requireProductId();
-        $existing = $this->requireExistingProduct($productId);
-
-        $finalImagePath = $this->resolveProductImagePath($existing);
-
-        [$name, $category, $description, $price, $stock] = $this->readAndValidateProductFields();
-
-        $product = $this->buildProductEntity(
-            $productId,
-            $name,
-            $description,
-            $price,
-            $category,
-            $stock,
-            $finalImagePath
-        );
-
-        $this->persistProductOrFail($product);
-
-        $variantPayloads = $this->readVariantPayloads();
-        $this->applyVariantChanges($productId, $variantPayloads);
-
-        $this->logProductUpdate($productId);
-
-        $this->redirect('/admin/products/edit/' . $productId . '?saved=1');
-    }
-
-
-    // Helper methods
-
-    private function requireProductId(): int
-    {
         $productId = (int) $this->input('productId', 0);
-        if ($productId <= 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'Invalid productId'], 400);
+
+        try {
+            if ($productId <= 0) {
+                throw new RuntimeException('Invalid product id.');
+            }
+
+            $existing = $this->requireExistingProduct($productId);
+            $finalImagePath = $this->resolveProductImagePath($existing);
+            [$name, $category, $description, $price, $stock] = $this->readAndValidateProductFields();
+
+            $product = new Product(
+                $productId,
+                $name,
+                $description,
+                $price,
+                $category,
+                $stock,
+                $finalImagePath,
+                null,
+                null,
+                true
+            );
+
+            $updateResult = $this->productService->updateProduct($product);
+            if (!empty($updateResult['error'])) {
+                throw new RuntimeException((string) $updateResult['error']);
+            }
+
+            $variantRows = $this->readVariantPayloads();
+            $this->applyVariantChanges($productId, $variantRows);
+
+            $this->setFlash('admin', 'Product updated successfully.', 'success');
+            $this->redirect('/admin/products/edit/' . $productId);
+        } catch (\Throwable $e) {
+            $this->setFlash('admin', $e->getMessage(), 'error');
+            $this->redirect('/admin/products/edit/' . max(1, $productId));
         }
-        return $productId;
     }
 
     private function requireExistingProduct(int $productId)
     {
         $existing = $this->productService->getProductById($productId);
         if (!$existing) {
-            $this->jsonResponse(['success' => false, 'message' => 'Product not found'], 404);
+            throw new RuntimeException('Product not found.');
         }
+
         return $existing;
+    }
+
+    private function saveUploadedProductImage(array $file): array
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return [null, null];
+        }
+
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            return [null, 'File exceeds upload limit.'];
+        }
+
+        $maxBytes = 5 * 1024 * 1024;
+        if (($file['size'] ?? 0) > $maxBytes) {
+            return [null, 'Image must be 5MB or smaller.'];
+        }
+
+        $tmp = $file['tmp_name'] ?? '';
+        if ($tmp === '' || !is_uploaded_file($tmp)) {
+            return [null, 'Invalid uploaded file.'];
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $finfo->file($tmp);
+
+        $allowed = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+
+        if (!isset($allowed[$mime])) {
+            return [null, 'Only JPG, PNG, or WEBP images are allowed.'];
+        }
+
+        $dirFs = __DIR__ . '/../../Public/images/products';
+        if (!is_dir($dirFs) && !mkdir($dirFs, 0755, true)) {
+            return [null, 'Could not create image folder.'];
+        }
+
+        $name = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+        $destFs = $dirFs . '/' . $name;
+
+        if (!move_uploaded_file($tmp, $destFs)) {
+            return [null, 'Could not save uploaded image.'];
+        }
+
+        return ['/images/products/' . $name, null];
     }
 
     private function resolveProductImagePath($existing): ?string
     {
-        // Optional upload
         [$newImagePath, $imageError] = $this->saveUploadedProductImage($_FILES['image'] ?? []);
         if ($imageError !== null) {
-            $this->jsonResponse(['success' => false, 'message' => $imageError], 400);
+            throw new RuntimeException($imageError);
         }
 
-        if ($newImagePath)
+        if ($newImagePath !== null) {
             return $newImagePath;
+        }
 
-        // Keep old image if no upload
-        if (is_array($existing))
-            return $existing['image'] ?? null;
-        if (is_object($existing) && method_exists($existing, 'getImage'))
-            return $existing->getImage();
+        if (is_array($existing)) {
+            return (string) ($existing['image'] ?? '');
+        }
+
+        if (is_object($existing) && method_exists($existing, 'getImage')) {
+            return (string) $existing->getImage();
+        }
 
         return null;
     }
@@ -534,52 +388,18 @@ class AdminController extends ControllerBase
         $stock = (int) $this->input('stock', 0);
 
         if ($name === '' || $category === '') {
-            $this->jsonResponse(['success' => false, 'message' => 'Product name and category are required'], 400);
+            throw new RuntimeException('Product name and category are required.');
         }
         if ($price < 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'Price cannot be negative'], 400);
+            throw new RuntimeException('Price cannot be negative.');
         }
         if ($stock < 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'Stock cannot be negative'], 400);
+            throw new RuntimeException('Stock cannot be negative.');
         }
 
         return [$name, $category, $description, $price, $stock];
     }
 
-    private function buildProductEntity(
-        int $productId,
-        string $name,
-        string $description,
-        float $price,
-        string $category,
-        int $stock,
-        ?string $imagePath
-    ): Product {
-        return new Product(
-            $productId,
-            $name,
-            $description,
-            $price,
-            $category,
-            $stock,
-            $imagePath,
-            null,
-            null,
-            true
-        );
-    }
-
-    private function persistProductOrFail(Product $product): void
-    {
-        $ok = $this->productService->updateProduct($product);
-        if (!$ok) {
-            $this->jsonResponse(['success' => false, 'message' => 'Failed to update product'], 400);
-        }
-    }
-
-    /**
-     * Reads parallel arrays from POST into a safe structure.
-     */
     private function readVariantPayloads(): array
     {
         $ids = $this->asArray($this->input('variantId', []));
@@ -587,21 +407,23 @@ class AdminController extends ControllerBase
         $colours = $this->asArray($this->input('variantColour', []));
         $stocks = $this->asArray($this->input('variantStock', []));
         $prices = $this->asArray($this->input('variantPrice', []));
-        $deletes = $this->asArray($this->input('variantDelete', []));
+        $deleteIds = array_map('intval', $this->asArray($this->input('variantDeleteIds', [])));
 
-        $count = max(count($ids), count($sizes), count($colours), count($stocks), count($prices), count($deletes));
+        $count = max(count($ids), count($sizes), count($colours), count($stocks), count($prices));
 
         $rows = [];
         for ($i = 0; $i < $count; $i++) {
+            $variantId = (int) ($ids[$i] ?? 0);
             $rows[] = [
-                'variantId' => (int) ($ids[$i] ?? 0),
-                'delete' => (int) ($deletes[$i] ?? 0),
+                'variantId' => $variantId,
+                'delete' => in_array($variantId, $deleteIds, true) ? 1 : 0,
                 'size' => trim((string) ($sizes[$i] ?? '')),
                 'colour' => trim((string) ($colours[$i] ?? '')),
                 'stock' => (int) ($stocks[$i] ?? 0),
                 'price' => (float) ($prices[$i] ?? 0),
             ];
         }
+
         return $rows;
     }
 
@@ -613,28 +435,23 @@ class AdminController extends ControllerBase
                 continue;
             }
 
-            if ($this->isVariantRowSkippable($row)) {
-                continue;
-            }
-
-            if ($this->isVariantRowInvalid($row)) {
-                // If you want: hard fail instead of skip
+            if ($this->isVariantRowSkippable($row) || $this->isVariantRowInvalid($row)) {
                 continue;
             }
 
             if ((int) $row['variantId'] > 0) {
                 $this->productService->updateVariantByFields(
                     (int) $row['variantId'],
-                    $row['size'],
-                    $row['colour'],
+                    (string) $row['size'],
+                    (string) $row['colour'],
                     (int) $row['stock'],
                     (float) $row['price']
                 );
             } else {
                 $this->productService->createVariantByFields(
                     $productId,
-                    $row['size'],
-                    $row['colour'],
+                    (string) $row['size'],
+                    (string) $row['colour'],
                     (int) $row['stock'],
                     (float) $row['price']
                 );
@@ -649,31 +466,20 @@ class AdminController extends ControllerBase
 
     private function isVariantRowSkippable(array $row): bool
     {
-        // empty new row (e.g. user clicked add then didn't fill it)
         return $row['size'] === '' && $row['colour'] === '' && (int) $row['variantId'] === 0;
     }
 
     private function isVariantRowInvalid(array $row): bool
     {
-        // incomplete variant row
-        if ($row['size'] === '' || $row['colour'] === '')
+        if ($row['size'] === '' || $row['colour'] === '') {
             return true;
-        if ((int) $row['stock'] < 0)
-            return true;
-        if ((float) $row['price'] < 0)
-            return true;
-        return false;
-    }
+        }
 
-    private function logProductUpdate(int $productId): void
-    {
-        $this->logService->log(
-            $this->currentUserId(),
-            'Updated Product + Variants',
-            'product',
-            $productId,
-            'Product updated (including variants)'
-        );
+        if ((int) $row['stock'] < 0) {
+            return true;
+        }
+
+        return (float) $row['price'] < 0;
     }
 
     private function asArray($value): array
@@ -681,16 +487,13 @@ class AdminController extends ControllerBase
         return is_array($value) ? $value : [];
     }
 
-    private function getOrdersCount(): int
+    private function setAdminFlash(string $message, string $type = 'success'): void
     {
-        return $this->orderService->countAllOrders();
+        $this->setFlash('admin', $message, $type);
     }
 
-    private function getPendingAppointmentsCount(): int
+    private function consumeAdminFlash(): array
     {
-        return $this->appointmentService->countPending();
+        return $this->consumeFlash('admin');
     }
-
-
-
 }

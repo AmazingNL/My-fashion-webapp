@@ -3,12 +3,11 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Services\IUserService;
 use App\Repositories\IUserRepository;
-use App\Core\RepositoryBase;
 use DateTime;
+use Exception;
 
-class UserService extends RepositoryBase implements IUserService
+class UserService implements IUserService
 {
     private IUserRepository $userRepository;
 
@@ -17,37 +16,34 @@ class UserService extends RepositoryBase implements IUserService
         $this->userRepository = $userRepository;
     }
 
+
     public function createUser(User $user, string $password): array
     {
-        if ($user !== null) {
-            $existingUser = $this->userRepository->findByEmail($user->getEmail());
-            if ($existingUser !== null) {
-                return ['email' => 'Email is already registered.'];
-            }
-        }
         $errors = $this->validatePassword($password);
-
         if (!empty($errors)) {
-            return $errors; // controller will jsonResponse these
+            return $errors;
         }
-
+        $email = $this->normalizeEmail($user->email);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['email' => 'Please enter a valid email address.'];
+        }
+        if ($this->userRepository->findByEmail($email) !== null) {
+            return ['email' => 'An account with this email already exists.'];
+        }
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
         $userToSave = new User(
-            $user->getUserId(),
-            $user->getFirstName(),
-            $user->getLastName(),
-            strtolower(trim($user->getEmail())),
+            $user->userId,
+            $user->firstName,
+            $user->lastName,
+            $email,
             $hashedPassword,
-            $user->getPhone(),
-            $user->getRole(),
+            $user->phone,
+            $user->role,
             new DateTime(),
             new DateTime()
         );
-
         $this->userRepository->save($userToSave);
-
-        return []; // no errors
+        return [];
     }
 
     private function validatePassword(string $password): array
@@ -56,10 +52,9 @@ class UserService extends RepositoryBase implements IUserService
 
         if (strlen($password) < 8) {
             $errors['password'] = 'Password must be at least 8 characters long.';
-            return $errors; // early return is fine
+            return $errors;
         }
 
-        // at least one letter (upper OR lower)
         if (!preg_match('/[a-zA-Z]/', $password)) {
             $errors['password'] = 'Password must contain at least one letter.';
             return $errors;
@@ -73,95 +68,58 @@ class UserService extends RepositoryBase implements IUserService
         return $errors;
     }
 
-    public function authenticateUser($email, $password): ?User
+    public function authenticateUser(string $email, string $password): ?User
     {
+        $email = $this->normalizeEmail($email);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;
         }
-
         $user = $this->userRepository->findByEmail($email);
-        if (empty($user)) {
+        if (!$user) {
             return null;
         }
-
-        if (!password_verify($password, $user->getPassword())) {
+        if (!password_verify($password, $user->password)) {
             return null;
         }
-
         return $user;
     }
 
 
-    public function getUserById($id): ?User
+    public function getUserById(int $id): ?User
     {
         return $this->userRepository->findById($id);
     }
 
-    public function getUserByEmail($email): ?User
+    public function getUserByEmail(string $email): ?User
     {
-        try {
-            return $this->userRepository->findByEmail($email);
-        } catch (\Exception $e) {
+        $email = $this->normalizeEmail($email);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;
         }
+
+        return $this->userRepository->findByEmail($email);
     }
 
-    public function updateUser(User $user): bool
+    public function deleteUser(int $userId): bool
     {
-        try {
-            $this->userRepository->update($user);
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    public function updateUserStatus(int $userId, bool $isActive): bool
-    {
-        try {
-            return $this->userRepository->updateUserStatus($userId, $isActive);
-        } catch (\Exception $e) {
-            return false;
-        }
+        return $this->userRepository->deleteUser($userId);
     }
 
 
-    public function changeUserPassword($id, $newPassword): bool
-    {
-        try {
-            $this->userRepository->changePassword($id, $newPassword);
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
 
-    public function changeUserEmail($id, $newEmail): bool
+    public function changeUserPassword(int $id, string $newPassword): bool
     {
-        try {
-            $this->userRepository->changeEmail($id, $newEmail);
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-    public function deleteUser($id): bool
-    {
-        try {
-            $this->userRepository->delete($id);
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
+        return $this->userRepository->changePassword($id, $newPassword);
     }
 
     public function getAllUsers(): array
     {
-        try {
-            return $this->userRepository->getAll();
-        } catch (\Exception $e) {
-            return [];
-        }
+        return $this->userRepository->getAll();
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        return strtolower(trim($email));
     }
 
 

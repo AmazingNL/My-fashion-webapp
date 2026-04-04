@@ -99,9 +99,8 @@
 		}
 
 		// ============================================
-		// Counters (Cart + Favourites)
+		// Favourites counter
 		// ============================================
-		const cartCountEl = document.getElementById("cartCount");
 		const favCountEl = document.getElementById("favCount");
 
 		function pulse(el) {
@@ -112,69 +111,74 @@
 			setTimeout(() => el.classList.remove("pulse"), 260);
 		}
 
-		async function updateCartCount() {
-			if (!cartCountEl) return;
-
-			try {
-				const res = await csrfFetch("/getBasketCount", {
-					method: "GET",
-					credentials: "same-origin",
-					headers: { Accept: "application/json" },
-				});
-
-				if (!res.ok) return;
-
-				const data = await res.json().catch(() => ({}));
-				const count = Number(data.count ?? 0);
-
-				cartCountEl.textContent = String(count);
-				cartCountEl.hidden = count <= 0;
-
-				if (count > 0) pulse(cartCountEl);
-			} catch (err) {
-				console.error("Failed to update cart count:", err);
-			}
-		}
-
-		async function updateFavCount() {
+		function updateFavCount() {
 			if (!favCountEl) return;
 
-			try {
-				const res = await fetch("/api/favourites/products", {
-					method: "GET",
-					credentials: "same-origin",
-					headers: { Accept: "application/json" },
-				});
+			const count = Number(
+				favCountEl.dataset.count || favCountEl.textContent || 0
+			);
 
-				// If not logged in, controller may return 401/403 -> hide badge
-				if (!res.ok) {
-					favCountEl.hidden = true;
-					return;
-				}
+			favCountEl.textContent = String(count);
+			favCountEl.hidden = count <= 0;
 
-				const data = await res.json().catch(() => ({}));
-				const list = Array.isArray(data.products) ? data.products : [];
-				const count = list.length;
-
-				favCountEl.textContent = String(count);
-				favCountEl.hidden = count <= 0;
-
-				if (count > 0) pulse(favCountEl);
-			} catch (err) {
-				console.error("Failed to update favourite count:", err);
-			}
+			if (count > 0) pulse(favCountEl);
 		}
 
 		// initial load
-		updateCartCount();
 		updateFavCount();
 
 		// update when pages dispatch events
-		window.addEventListener("cartUpdated", updateCartCount);
 		window.addEventListener("favouritesUpdated", updateFavCount);
 
 		// allow other scripts to call
-		window.updateCartCount = updateCartCount;
 		window.updateFavCount = updateFavCount;
+
+		// ============================================
+		// Quantity controls (product details)
+		// ============================================
+		function clampQuantity(input) {
+			const min = Number(input.min || 1);
+			const max = Number(input.max || 999);
+			const value = Number(input.value || min);
+			const clamped = Math.max(min, Math.min(max, value));
+			input.value = String(clamped);
+		}
+
+		document
+			.querySelectorAll(".quantity-input-wrapper")
+			.forEach(function (wrapper) {
+				if (wrapper.dataset.qtyBound === "1") return;
+				const input = wrapper.querySelector(".quantity-input");
+				const decreaseBtn = wrapper.querySelector(
+					'.qty-btn[data-action="decrease"]'
+				);
+				const increaseBtn = wrapper.querySelector(
+					'.qty-btn[data-action="increase"]'
+				);
+
+				if (!input) return;
+
+				decreaseBtn?.addEventListener("click", function (event) {
+					event.preventDefault();
+					const current = Number(input.value || input.min || 1);
+					input.value = String(current - 1);
+					clampQuantity(input);
+				});
+
+				increaseBtn?.addEventListener("click", function (event) {
+					event.preventDefault();
+					const current = Number(input.value || input.min || 1);
+					input.value = String(current + 1);
+					clampQuantity(input);
+				});
+
+				wrapper.dataset.qtyBound = "1";
+			});
+
+		document.addEventListener("input", function (event) {
+			const input = event.target.closest(".quantity-input");
+			if (!input) return;
+			clampQuantity(input);
+		});
 	});
 })();

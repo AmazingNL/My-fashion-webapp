@@ -11,167 +11,174 @@ use App\Models\PaymentStatus;
 use App\Services\ICartService;
 use App\Services\IOrderService;
 use App\Services\IOrderItemService;
-use App\Services\IActivityLogService;
 
 class CheckoutController extends ControllerBase
 {
     private ICartService $cartService;
     private IOrderService $orderService;
     private IOrderItemService $orderItemService;
-    private IActivityLogService $logService;
 
+    // Wire the checkout controller to cart and order services.
     public function __construct(
         ICartService $cartService,
         IOrderService $orderService,
-        IOrderItemService $orderItemService,
-        IActivityLogService $logService
+        IOrderItemService $orderItemService
     ) {
         $this->cartService = $cartService;
         $this->orderService = $orderService;
         $this->orderItemService = $orderItemService;
-        $this->logService = $logService;
     }
 
-    // GET /checkout
+    // Show the checkout form and the current cart summary.
     public function showCheckout(): void
     {
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
-        if ($this->cartService->isEmpty()) {
-            $this->redirect('/viewCart?error=cart_empty');
-        }
+        $this->ensureSession();
+        $flash = $_SESSION['checkout_flash'] ?? null;
+        unset($_SESSION['checkout_flash']);
 
+        if ($this->cartService->isEmpty()) {
+            $this->setFlash('checkout', 'Your cart is empty.', 'error');
+            $this->redirect('/viewCart');
+            return;
+        }
         $this->render('Checkout/Index', [
             'title' => 'Checkout',
             'cartItems' => $this->cartService->getCartItems(),
-            'total' => $this->cartService->getTotalPrice()
-        ], );
+            'total' => $this->cartService->getTotalPrice(),
+            'noticeMessage' => is_array($flash) ? (string) ($flash['message'] ?? '') : '',
+            'noticeType' => is_array($flash) ? (string) ($flash['type'] ?? 'success') : 'success',
+        ]);
     }
 
     // POST /checkout/place
+    // Validate the cart and place the order from the submitted form.
     public function processCheckout(): void
     {
         Middleware::requireAuth();
         Middleware::requireCustomer();
         $this->validateCsrf();
+        $userId = $this->requireCheckoutUserId();
+        if ($userId === null) {
+            return;
+        }
 
-        $userId = $this->requireUser();
-        $this->ensureCartNotEmpty($userId);
+        if (!$this->validateCheckoutCartOrRedirect()) {
+            return;
+        }
 
-        $data = $this->checkoutInput();
-        $this->validateCartOrFail($userId);
+        $checkoutInput = $this->readCheckoutInputOrRedirect();
+        if ($checkoutInput === null) {
+            return;
+        }
 
-        $this->placeOrderAndRespond($userId, $data);
+        [$shipping, $billing, $payment] = $checkoutInput;
+        $this->placeCheckoutOrder($userId, $shipping, $billing, $payment);
+    }
+
+    // Ensure we have a valid logged-in customer id before placing an order.
+    private function requireCheckoutUserId(): ?int
+    {
+        $userId = (int) ($this->currentUserId() ?? 0);
+        if ($userId > 0) {
+            return $userId;
+        }
+
+        $this->setFlash('checkout', 'Your session expired. Please log in again.', 'error');
+        $this->redirect('/?error=login_required');
+        return null;
+    }
+
+    // Re-validate cart state to prevent checkout with stale product/stock data.
+    private function validateCheckoutCartOrRedirect(): bool
+    {
+        $errors = $this->cartService->validateCart();
+        if (empty($errors)) {
+            return true;
+        }
+
+        $this->setFlash('checkout', implode(' | ', $errors), 'error');
+        $this->redirect('/checkout');
+        return false;
+    }
+
+    // Read and validate checkout form fields.
+    private function readCheckoutInputOrRedirect(): ?array
+    {
+        $shipping = trim((string) $this->input('shippingAddress', ''));
+        if ($shipping === '') {
+            $this->setFlash('checkout', 'Shipping address is required', 'error');
+            $this->redirect('/checkout');
+            return null;
+        }
+
+        $billing = trim((string) $this->input('billingAddress', '')) ?: $shipping;
+        $payment = trim((string) $this->input('paymentMethod', 'credit_card'));
+
+        return [$shipping, $billing, $payment];
+    }
+
+    // Create the order and handle known failure paths.
+    private function placeCheckoutOrder(int $userId, string $shipping, string $billing, string $payment): void
+    {
+        try {
+            $result = $this->orderService->placeOrder(
+                $userId,
+                $shipping,
+                $billing,
+                $payment,
+                OrderStatus::PENDING,
+                PaymentStatus::PENDING
+            );
+
+            $orderId = (int) ($result['orderId'] ?? 0);
+            $this->cartService->clearCart();
+            $this->redirect('/orders/' . $orderId . '?success=' . urlencode('Order placed successfully.'));
+        } catch (\Throwable $e) {
+            $message = (string) $e->getMessage();
+            if (str_contains($message, 'orders_ibfk_1') || str_contains($message, 'FOREIGN KEY (`userId`)')) {
+                // Session user no longer exists in DB (stale login after DB reset/import).
+                $this->ensureSession();
+                unset($_SESSION['userId'], $_SESSION['role']);
+                $this->redirect('/?error=login_required');
+                return;
+            }
+
+            $this->setFlash('checkout', 'Checkout failed: ' . $e->getMessage(), 'error');
+            $this->redirect('/checkout');
+        }
     }
 
 
-    // GET /checkout/confirmation/{id} (optional)
+    // GET /checkout/confirmation/{id}
+    // Render the order confirmation page for the current customer.
     public function confirmation(int $orderId): void
     {
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
-        $userId = $this->sessionUserId();
-        if (!$userId)
-            $this->redirect('/');
-
-        $order = $this->orderService->getMyOrder((int) $userId, (int) $orderId);
-        $items = $this->orderItemService->getByOrderId((int) $orderId);
-
-        $this->logService->log(
-            $userId,
-            'Order Confirmation Viewed',
-            'order',
-            (int) $orderId,
-            'User viewed confirmation page.'
-        );
-
-        $this->render('Checkout/OrderConfirmation', [
-            'title' => 'Order Confirmation',
-            'order' => $order,
-            'orderItems' => $items,
-        ]);
-    }
-
-
-
-    // Private and Helper Methods //
-    private function requireUser(): int
-    {
-        $id = (int) ($this->sessionUserId() ?? 0);
-        if ($id <= 0) {
-            $this->jsonResponse(['error' => 'login_required'], 401);
-            exit;
+        $userId = (int) ($this->currentUserId() ?? 0);
+        if ($userId <= 0) {
+            $this->redirect('/checkout');
+            return;
         }
-        return $id;
-    }
 
-    private function ensureCartNotEmpty(int $userId): void
-    {
-        if (!$this->cartService->isEmpty())
-            return;
-
-        $this->logService->log($userId, 'Checkout Failed', 'checkout', null, 'Cart is empty.');
-        $this->jsonResponse(['error' => 'Cart is empty'], 400);
-        exit;
-    }
-
-    private function checkoutInput(): array
-    {
-        return [
-            'shipping' => trim((string) $this->input('shippingAddress', '')),
-            'billing' => trim((string) $this->input('billingAddress', '')) ?: null,
-            'payment' => trim((string) $this->input('paymentMethod', 'credit_card')),
-        ];
-    }
-
-    private function validateCartOrFail(int $userId): void
-    {
-        $errors = $this->cartService->validateCart();
-        if (empty($errors))
-            return;
-
-        $this->logService->log(
-            $userId,
-            'Checkout Failed',
-            'checkout',
-            null,
-            implode(' | ', $errors)
-        );
-        $this->jsonResponse(['error' => implode(' | ', $errors)], 400);
-        exit;
-    }
-
-    private function placeOrderAndRespond(int $userId, array $data): void
-    {
         try {
-            $res = $this->orderService->placeOrder(
-                $userId,
-                $data['shipping'],
-                $data['billing'],
-                $data['payment'],
-                OrderStatus::PENDING,
-                PaymentStatus::PENDING
-            );
+            $order = $this->orderService->getMyOrder($userId, $orderId);
+            $items = $this->orderItemService->getByOrderId($orderId);
 
-            $this->cartService->clearCart();
-
-            $this->jsonResponse([
-                'message' => 'Order placed successfully',
-                'orderId' => (int) $res['orderId'],
-                'totalAmount' => (float) $res['totalAmount'],
-                'redirect' => "/orders/{$res['orderId']}",
-            ], 201);
+            $this->render('Checkout/OrderConfirmation', [
+                'title' => 'Order Confirmation',
+                'order' => $order,
+                'orderItems' => $items,
+                'success' => 'Your order has been placed successfully!',
+            ]);
         } catch (\Throwable $e) {
-            $this->logService->log($userId, 'Checkout Failed', 'checkout', null, $e->getMessage());
-            $this->jsonResponse(['error' => 'Checkout failed'], 400);
+            $this->setFlash('checkout', 'Order not found', 'error');
+            $this->redirect('/checkout');
         }
-    }
-
-    private function sessionUserId(): ?int
-    {
-        $this->ensureSession();
-        return isset($_SESSION['userId']) ? (int) $_SESSION['userId'] : null;
     }
 }
+

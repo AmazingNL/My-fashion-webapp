@@ -1,5 +1,3 @@
-version: '3'
-
 services:
     nginx:
         image: nginx:latest
@@ -27,6 +25,7 @@ services:
             MYSQL_DATABASE: 'developmentdb'
         volumes:
             - mysqldata:/var/lib/mysql
+            - ./database:/docker-entrypoint-initdb.d:ro
         ports:
             - 3306:3306
     phpmyadmin:

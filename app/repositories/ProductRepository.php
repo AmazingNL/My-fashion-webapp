@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Repositories\IProductRepository;
 use App\Core\RepositoryBase;
+use Exception;
+use RuntimeException;
 
 class ProductRepository extends RepositoryBase implements IProductRepository
 {
@@ -13,109 +15,215 @@ class ProductRepository extends RepositoryBase implements IProductRepository
     /** @return Product[] */
     public function getAllActive(): array
     {
-        $sql = "SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute();
-
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-        return array_map(fn($r) => $this->mapProduct($r), $rows);
+        try {
+            $sql = "SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute();
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            return $rows;
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error " . $e);
+        }
     }
-
-    public function findSimilarProducts(int $id, string $category, int $limit = 4): array
-    {
-        $tokens = $this->catTokens($category);
-
-        return $this->fetchProducts(
-            $this->buildCategorySql($tokens),
-            $this->buildCategoryParams($id, $tokens),
-            $limit
-        );
-    }
-
-
 
     /** @return ProductVariant[] */
-    public function getVariantsByProductId(int $productId): array
+    public function getVariantsByProductId(int $id): array
     {
-        $sql = "SELECT * FROM product_variants WHERE productId = :pid ORDER BY size, colour";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':pid' => $productId]);
+        try {
+            $sql = "SELECT * FROM product_variants WHERE productId = :pid ORDER BY size, colour";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':pid' => $id]);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
-        $productVariants = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-        return array_map(fn($r) => $this->mapProductVariant($r), $productVariants);
+            return array_map(function (array $row): ProductVariant {
+                return new ProductVariant(
+                    (int) ($row['variantId'] ?? 0),
+                    (int) ($row['productId'] ?? 0),
+                    (string) ($row['size'] ?? ''),
+                    (string) ($row['colour'] ?? ''),
+                    (int) ($row['stockQuantity'] ?? 0)
+                );
+            }, $rows);
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
+        }
+
     }
 
 
     public function getVariantById(int $variantId): ?ProductVariant
     {
-        $sql = "SELECT * FROM product_variants WHERE variantId = :variantId";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':variantId' => $variantId]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        try {
+            $sql = "SELECT * FROM product_variants WHERE variantId = :variantId";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':variantId' => $variantId]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
 
-        if (!$row) {
-            return null;
+            return new ProductVariant(
+                (int) ($row['variantId'] ?? 0),
+                (int) ($row['productId'] ?? 0),
+                (string) ($row['size'] ?? ''),
+                (string) ($row['colour'] ?? ''),
+                (int) ($row['stockQuantity'] ?? 0)
+            );
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
         }
-        return $this->mapProductVariant($row);
+
     }
 
     public function getProductById(int $id): ?Product
     {
-        $sql = "SELECT * FROM products 
+        try {
+            $sql = "SELECT * FROM products 
             WHERE productId = :id 
             AND isActive = 1";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':id' => $id]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':id' => $id]);
-
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-        if (!$row) {
-            return null;
+            return new Product(
+                (int) ($row['productId'] ?? 0),
+                (string) ($row['productName'] ?? ''),
+                (string) ($row['description'] ?? ''),
+                (float) ($row['price'] ?? 0),
+                (string) ($row['category'] ?? ''),
+                (int) ($row['stock'] ?? 0),
+                (string) ($row['image'] ?? ''),
+                $row['createdAt'] ?? null,
+                $row['updatedAt'] ?? null,
+                (bool) ($row['isActive'] ?? false)
+            );
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
         }
-        return $this->mapProduct($row);
+
+    }
+
+    // For cart displays: include inactive products so customers can complete purchases
+    public function getProductByIdForCart(int $id): ?Product
+    {
+        try {
+            $sql = "SELECT * FROM products WHERE productId = :id";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':id' => $id]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+
+            return new Product(
+                (int) ($row['productId'] ?? 0),
+                (string) ($row['productName'] ?? ''),
+                (string) ($row['description'] ?? ''),
+                (float) ($row['price'] ?? 0),
+                (string) ($row['category'] ?? ''),
+                (int) ($row['stock'] ?? 0),
+                (string) ($row['image'] ?? ''),
+                $row['createdAt'] ?? null,
+                $row['updatedAt'] ?? null,
+                (bool) ($row['isActive'] ?? false)
+            );
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
+        }
+
+    }
+
+    public function getProductDetailsById(int $id): array
+    {
+        try {
+            $sql = "SELECT
+                        p.productId,
+                        p.productName,
+                        p.description,
+                        p.price,
+                        p.category,
+                        p.stock,
+                        p.image,
+                        p.createdAt,
+                        p.updatedAt,
+                        p.isActive,
+                        pv.variantId,
+                        pv.size,
+                        pv.colour,
+                        pv.stockQuantity
+                    FROM products p
+                    LEFT JOIN product_variants pv ON pv.productId = p.productId
+                    WHERE p.productId = :id AND p.isActive = 1
+                    ORDER BY pv.size, pv.colour";
+
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':id' => $id]);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+            if (empty($rows)) {
+                return ['product' => null, 'variants' => []];
+            }
+
+            return $this->mapJoinedProductDetails($rows);
+        } catch (Exception $e) {
+            throw new RuntimeException('DB error ' . $e->getMessage());
+        }
     }
 
 
     public function save(Product $product): int
     {
-        $sql = "INSERT INTO products
+        try {
+            $sql = "INSERT INTO products
                 (productName, description, price, category, stock, image, createdAt, updatedAt, isActive)
-                VALUES (:productName, :description, :price, :category, :stock, :image, NOW(), NOW(), :isActive)";
+                VALUES 
+                (:productName, :description, :price, :category, :stock, :image, NOW(), NOW(), :isActive)";
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([
-            ':productName' => $product->getName(),
-            ':description' => $product->getDescription(),
-            ':price' => $product->getPrice(),
-            ':category' => $product->getCategory(),
-            ':stock' => $product->getStock(),
-            ':image' => $product->getImage(),
-            ':isActive' => 1
-
-        ]);
-
-        return (int) $this->getConnection()->lastInsertId();
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':productName' => $product->productName,
+                ':description' => $product->description,
+                ':price' => $product->price,
+                ':category' => $product->category,
+                ':stock' => $product->stock,
+                ':image' => $product->image,
+                ':isActive' => $product->isActive
+            ]);
+            return (int) $this->getConnection()->lastInsertId();
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
+        }
     }
 
     public function saveVariant(ProductVariant $variant): void
     {
-        $sql = "INSERT INTO product_variants
+        try {
+            $sql = "INSERT INTO product_variants
                 (productId, size, colour, stockQuantity)
-                VALUES (:productId, :size, :colour, :stockQuantity)";
+                VALUES
+                (:productId, :size, :colour, :stockQuantity)";
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([
-            ':productId' => $variant->getProductId(),
-            ':size' => $variant->getSize(),
-            ':colour' => $variant->getColour(),
-            ':stockQuantity' => $variant->getStockQuantity()
-        ]);
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':productId' => $variant->productId,
+                ':size' => $variant->size,
+                ':colour' => $variant->colour,
+                ':stockQuantity' => $variant->stockQuantity
+            ]);
+
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
+        }
+
     }
 
-    public function update(Product $product): void
+    public function update(Product $product): bool
     {
-        $sql = "UPDATE products 
+        try {
+            $sql = "UPDATE products 
             SET productName = :productName,
                 description = :description,
                 price = :price,
@@ -125,133 +233,100 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 updatedAt = NOW(),
                 isActive = :isActive
             WHERE productId = :productId";
-
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([
-            ':productName' => $product->getName(),
-            ':description' => $product->getDescription(),
-            ':price' => $product->getPrice(),
-            ':category' => $product->getCategory(),
-            ':stock' => $product->getStock(),
-            ':image' => $product->getImage(),
-            ':isActive' => 1,
-            ':productId' => (int) $product->getId(),
-        ]);
-    }
-
-    public function delete($id): void
-    {
-        // soft-delete is usually nicer for admin panels,
-        // but keeping your interface: we'll deactivate
-        $sql = "UPDATE products SET isActive = 0, updatedAt = NOW() WHERE productId = :id";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':id' => (int) $id]);
-    }
-
-    public function updateVariant(ProductVariant $variant): void
-    {
-        if ($variant->getVariantId() === null) {
-            throw new \InvalidArgumentException("VariantId is required for update.");
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':productName' => $product->productName,
+                ':description' => $product->description,
+                ':price' => $product->price,
+                ':category' => $product->category,
+                ':stock' => $product->stock,
+                ':image' => $product->image,
+                ':isActive' => 1,
+                ':productId' => (int) $product->productId,
+            ]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
         }
 
-        $sql = "UPDATE product_variants
+    }
+
+    public function delete($id): bool
+    {
+        try {
+            $sql = "UPDATE products SET isActive = 0, updatedAt = NOW() WHERE productId = :id";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':id' => (int) $id]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
+        }
+
+    }
+
+    public function updateVariant(ProductVariant $variant): bool
+    {
+        try {
+            $sql = "UPDATE product_variants
             SET size = :size,
                 colour = :colour,
                 stockQuantity = :stockQuantity
             WHERE variantId = :variantId";
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([
-            ':size' => $variant->getSize(),
-            ':colour' => $variant->getColour(),
-            ':stockQuantity' => $variant->getStockQuantity(),
-            ':variantId' => (int) $variant->getVariantId(),
-        ]);
-    }
-    public function deleteVariant(int $variantId): void
-    {
-        $sql = "DELETE FROM product_variants WHERE variantId = :variantId";
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([':variantId' => $variantId]);
-    }
-
-    ///// Private helper to map database row to Product model
-
-    private function mapProduct(array $r): Product
-    {
-        return new Product(
-            (int) $r['productId'],
-            (string) $r['productName'],
-            (string) $r['description'],
-            (float) $r['price'],
-            (string) $r['category'],
-            (int) $r['stock'],
-            (string) $r['image'],
-            $r['createdAt'] ?? null,
-            $r['updatedAt'] ?? null,
-            (bool) $r['isActive']
-        );
-    }
-
-    private function mapProductVariant(array $r): ProductVariant
-    {
-        return new ProductVariant(
-            (int) $r['variantId'],
-            (int) $r['productId'],
-            (string) $r['size'],
-            (string) $r['colour'],
-            (int) $r['stockQuantity']
-        );
-    }
-
-    private function catTokens(string $category): array
-    {
-        return array_values(array_filter(array_unique(
-            preg_split('/\s*,\s*/', strtolower($category))
-        )));
-    }
-
-    private function buildCategorySql(array $tokens): string
-    {
-        if (!$tokens)
-            return '';
-
-        return 'AND (' . implode(' OR ', array_map(
-            fn($i) => "CONCAT(',', REPLACE(LOWER(category),' ',''), ',') LIKE :t$i",
-            array_keys($tokens)
-        )) . ')';
-    }
-
-    private function buildCategoryParams(int $excludeId, array $tokens): array
-    {
-        $params = [':excludeId' => $excludeId];
-        foreach ($tokens as $i => $t) {
-            $params[":t$i"] = "%," . str_replace(' ', '', $t) . ",%";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':size' => $variant->size,
+                ':colour' => $variant->colour,
+                ':stockQuantity' => $variant->stockQuantity,
+                ':variantId' => (int) $variant->variantId,
+            ]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error" . $e);
         }
-        return $params;
     }
 
-    private function fetchProducts(string $filterSql, array $params, int $limit): array
+    public function deleteVariant(int $variantId): bool
     {
-        $sql = "SELECT * FROM products
-            WHERE productId != :excludeId
-            AND isActive = 1
-            AND stock > 0
-            $filterSql
-            ORDER BY RAND()
-            LIMIT :limit";
-
-        $stmt = $this->getConnection()->prepare($sql);
-        foreach ($params as $k => $v)
-            $stmt->bindValue($k, $v);
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
-        $stmt->execute();
-
-        return array_map(
-            fn($r) => $this->mapProduct($r),
-            $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []
-        );
+        try {
+            $sql = "DELETE FROM product_variants WHERE variantId = :variantId";
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':variantId' => $variantId]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            throw new RuntimeException("DB error " . $e);
+        }
     }
 
 
+    private function mapJoinedProductDetails(array $rows): array
+    {
+        $first = $rows[0];
+        $product = [
+            'productId' => (int) $first['productId'],
+            'productName' => (string) $first['productName'],
+            'description' => (string) ($first['description'] ?? ''),
+            'price' => (float) $first['price'],
+            'category' => (string) ($first['category'] ?? ''),
+            'stock' => (int) ($first['stock'] ?? 0),
+            'image' => (string) ($first['image'] ?? ''),
+            'createdAt' => $first['createdAt'] ?? null,
+            'updatedAt' => $first['updatedAt'] ?? null,
+            'isActive' => (bool) ($first['isActive'] ?? false),
+        ];
+        $variants = [];
+        foreach ($rows as $row) {
+            if ($row['variantId'] === null) {
+                continue;
+            }
+            $variants[] = [
+                'variantId' => (int) $row['variantId'],
+                'productId' => (int) $row['productId'],
+                'size' => (string) ($row['size'] ?? ''),
+                'colour' => (string) ($row['colour'] ?? ''),
+                'stockQuantity' => (int) ($row['stockQuantity'] ?? 0),
+            ];
+        }
+        return ['product' => $product, 'variants' => $variants];
+    }
 }

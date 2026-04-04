@@ -53,38 +53,4 @@ class Middleware
             exit;
         }
     }
-
-    /**
-     * Check if user is guest (not logged in)
-     */
-    public static function requireGuest(): void
-    {
-        if (isset($_SESSION['userId'])) {
-            $role = $_SESSION['role'] ?? 'customer';
-            if ($role === 'admin') {
-                header('Location: /admin/dashboard');
-            } else {
-                header('Location: /productLists');
-            }
-            exit;
-        }
-    }
-
-    /**
-     * Redirect based on role
-     */
-    public static function redirectBasedOnRole(): void
-    {
-        if (!isset($_SESSION['userId'])) {
-            return;
-        }
-
-        $role = $_SESSION['role'] ?? 'customer';
-        if ($role === 'admin') {
-            header('Location: /admin/dashboard');
-        } else {
-            header('Location: /productLists');
-        }
-        exit;
-    }
 }
