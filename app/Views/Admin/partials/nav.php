@@ -18,8 +18,6 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
         <a class="admin-nav__link <?= $path === '/admin/orders' ? 'active' : '' ?>" href="/admin/orders">Orders</a>
         <a class="admin-nav__link <?= $path === '/admin/appointments' ? 'active' : '' ?>"
             href="/admin/appointments">Appointments</a>
-        <a class="admin-nav__link <?= $path === '/admin/activity' ? 'active' : '' ?>" href="/admin/activity">Activity
-            Logs</a>
     </div>
 
     <div class="admin-nav__right">

@@ -3,17 +3,28 @@
 namespace App\Models;
 
 class User {
-    private $userId;
-    private $firstName;
-    private $lastName;
-    private $email;
-    private $password;
-    private $phone;
-    private $role;
-    private $createdAt;
-    private $updatedAt;
+    public ?int $userId = null;
+    public string $firstName = '';
+    public string $lastName = '';
+    public string $email = '';
+    public string $password = '';
+    public string $phone = '';
+    public string $role = 'customer';
+    public ?string $createdAt = null;
+    public ?string $updatedAt = null;
 
-    public function __construct($userId, $firstName, $lastName, $email, $password, $phone, $role, $createdAt, $updatedAt) {
+    public function __construct(
+        ?int $userId = null,
+        string $firstName = '',
+        string $lastName = '',
+        string $email = '',
+        string $password = '',
+        string $phone = '',
+        string $role = 'customer',
+        \DateTimeInterface|string|null $createdAt = null,
+        \DateTimeInterface|string|null $updatedAt = null
+    ) {
+
         $this->userId = $userId;
         $this->firstName = $firstName;
         $this->lastName = $lastName;
@@ -21,44 +32,9 @@ class User {
         $this->password = $password;
         $this->phone = $phone;
         $this->role = $role;
-        $this->createdAt = $createdAt;
-        $this->updatedAt = $updatedAt;
+        $this->createdAt = $createdAt instanceof \DateTimeInterface ? $createdAt->format('Y-m-d H:i:s') : $createdAt;
+        $this->updatedAt = $updatedAt instanceof \DateTimeInterface ? $updatedAt->format('Y-m-d H:i:s') : $updatedAt;
     }
 
-    public function getUserId() {
-        return $this->userId;
-    }
-
-    public function getFirstName() {
-        return $this->firstName;
-    }
-
-    public function getLastName() {
-        return $this->lastName;
-    }
-
-    public function getEmail() {
-        return $this->email;
-    }
-
-    public function getPassword() {
-        return $this->password;
-    }
-
-    public function getPhone() {
-        return $this->phone;
-    }
-
-    public function getRole() {
-        return $this->role;
-    }
-
-    public function getCreatedAt() {
-        return $this->createdAt;
-    }
-
-    public function getUpdatedAt() {
-        return $this->updatedAt;
-    }
 
 }

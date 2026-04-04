@@ -36,20 +36,23 @@ class OrderService implements IOrderService
         OrderStatus $orderStatus = OrderStatus::PENDING,
         PaymentStatus $paymentStatus = PaymentStatus::PENDING
     ): array {
-        $shipping = $this->requireShipping($userId, $shippingAddress);
-        $billing = $this->billingOrShipping($billingAddress, $shipping);
+        [$shipping, $billing] = $this->normalizeAddresses(
+            $userId, $shippingAddress, $billingAddress
+            );
 
-        $cartItems = $this->requireCartItems();
+        $items = $this->requireCartItems();
         $total = $this->requireTotal();
-
-        $orderId = (int) $this->orderRepo->create(
-            $this->buildOrder($userId, $shipping, $billing, $paymentMethod, $total, $orderStatus, $paymentStatus)
+        $orderId = $this->createOrderRecord(
+            $userId,
+            $shipping,
+            $billing,
+            $paymentMethod,
+            $orderStatus,
+            $paymentStatus,
+            $total
         );
 
-        if ($orderId <= 0)
-            throw new RuntimeException('Failed to create order.');
-
-        $this->orderItemService->createFromCart($orderId, $cartItems);
+        $this->orderItemService->createFromCart($orderId, $items);
         $this->cartService->clearCart();
 
         return ['orderId' => $orderId, 'totalAmount' => $total];
@@ -68,7 +71,7 @@ class OrderService implements IOrderService
     public function getMyOrder(int $userId, int $orderId): Order
     {
         $order = $this->requireOrder($orderId);
-        if ((int) $order->getUserId() !== (int) $userId) {
+        if ((int) $order->userId !== (int) $userId) {
             throw new RuntimeException('Not allowed.');
         }
         return $order;
@@ -82,7 +85,7 @@ class OrderService implements IOrderService
 
     public function countAllOrders(): int
     {
-        return $this->orderRepo->countAll();
+        return count($this->orderRepo->getAll());
     }
 
     public function getOrderById(int $orderId): Order
@@ -101,7 +104,7 @@ class OrderService implements IOrderService
     public function cancelMyOrder(int $userId, int $orderId): bool
     {
         $order = $this->getMyOrder($userId, $orderId);
-        $status = strtolower((string) $order->getStatus());
+        $status = strtolower($order->status->value);
 
         if (in_array($status, ['shipped', 'delivered'], true)) {
             throw new RuntimeException('Order can no longer be cancelled.');
@@ -109,28 +112,7 @@ class OrderService implements IOrderService
         if ($status === 'cancelled')
             return true;
 
-        return (bool) $this->orderRepo->updateStatus($orderId, strtoupper(OrderStatus::CANCELLED->name));
-    }
-
-    /** Customer: update address (only before shipped) */
-    public function updateMyAddresses(int $userId, int $orderId, string $shipping, ?string $billing = null): bool
-    {
-        $order = $this->getMyOrder($userId, $orderId);
-        $status = strtolower((string) $order->getStatus());
-
-        if (in_array($status, ['shipped', 'delivered'], true)) {
-            throw new RuntimeException('Address cannot be changed after shipping.');
-        }
-
-        $shipping = trim($shipping);
-        if ($shipping === '')
-            throw new InvalidArgumentException('Shipping address is required.');
-
-        $billing = trim($billing ?? '');
-        if ($billing === '')
-            $billing = $shipping;
-
-        return (bool) $this->orderRepo->updateAddresses($orderId, $shipping, $billing);
+        return (bool) $this->orderRepo->updateStatus($orderId, OrderStatus::CANCELLED->value);
     }
 
     /** Admin: update status using enum */
@@ -138,8 +120,8 @@ class OrderService implements IOrderService
     {
         $order = $this->requireOrder($orderId);
 
-        $old = strtolower((string) $order->getStatus());
-        $new = $this->orderStatusToDb($newStatus);
+        $old = strtolower($order->status->value);
+        $new = strtolower($newStatus->value);
 
         // Basic transition rules
         $allowed = [
@@ -159,23 +141,14 @@ class OrderService implements IOrderService
         $payment = null;
 
         if ($new === 'processing') {
-            $payment = $this->paymentStatusToDb(PaymentStatus::COMPLETED); // "completed"
+            $payment = strtolower(PaymentStatus::COMPLETED->name); // "completed"
         } elseif ($new === 'cancelled') {
-            $payment = $this->paymentStatusToDb(PaymentStatus::FAILED); // "failed"
+            $payment = strtolower(PaymentStatus::FAILED->name); // "failed"
         }
 
         // Update status (and payment if needed)
         return (bool) $this->orderRepo->updateStatus($orderId, $new, $payment);
 
-    }
-
-    /** Admin: update payment status using enum */
-    public function adminUpdatePaymentStatus(int $orderId, PaymentStatus $paymentStatus): bool
-    {
-        $this->requireOrder($orderId);
-        $pay = $this->paymentStatusToDb($paymentStatus);
-
-        return (bool) $this->orderRepo->updatePaymentStatus($orderId, $pay);
     }
 
 
@@ -190,38 +163,6 @@ class OrderService implements IOrderService
             throw new RuntimeException('Order not found.');
 
         return $order;
-    }
-
-    /**
-     * Convert PHP enum -> DB enum string.
-     * MUST match your DB ENUM values exactly.
-     */
-    private function orderStatusToDb(OrderStatus $status): string
-    {
-        // OrderStatus::CANCELLED -> "cancelled"
-        return strtolower($status->name);
-    }
-
-    private function paymentStatusToDb(PaymentStatus $status): string
-    {
-        // PaymentStatus::COMPLETED -> "completed"
-        return strtolower($status->name);
-    }
-
-    private function requireShipping(int $userId, string $shippingAddress): string
-    {
-        if ($userId <= 0)
-            throw new InvalidArgumentException('Invalid user.');
-        $shipping = trim($shippingAddress);
-        if ($shipping === '')
-            throw new InvalidArgumentException('Shipping address is required.');
-        return $shipping;
-    }
-
-    private function billingOrShipping(?string $billingAddress, string $shipping): string
-    {
-        $billing = trim((string) ($billingAddress ?? ''));
-        return $billing === '' ? $shipping : $billing;
     }
 
     private function requireCartItems(): array
@@ -249,27 +190,48 @@ class OrderService implements IOrderService
         return $total;
     }
 
-    private function buildOrder(
+    private function normalizeAddresses(int $userId, string $shippingAddress, ?string $billingAddress): array
+    {
+        if ($userId <= 0) {
+            throw new InvalidArgumentException('Invalid user.');
+        }
+
+        $shipping = trim($shippingAddress);
+        if ($shipping === '') {
+            throw new InvalidArgumentException('Shipping address is required.');
+        }
+
+        $billing = trim((string) ($billingAddress ?? '')) ?: $shipping;
+        return [$shipping, $billing];
+    }
+
+    private function createOrderRecord(
         int $userId,
         string $shipping,
         string $billing,
         string $paymentMethod,
-        float $total,
         OrderStatus $orderStatus,
-        PaymentStatus $paymentStatus
-    ): Order {
-        return new Order(
-            null,
+        PaymentStatus $paymentStatus,
+        float $total
+    ): int {
+        $order = new Order(
+            0,
             $userId,
-            $this->orderStatusToDb($orderStatus),
+            $orderStatus,
             $total,
             $shipping,
             $billing,
             $paymentMethod,
-            $this->paymentStatusToDb($paymentStatus),
+            $paymentStatus,
             null,
             null
         );
-    }
 
+        $orderId = (int) $this->orderRepo->create($order);
+        if ($orderId <= 0) {
+            throw new RuntimeException('Failed to create order.');
+        }
+
+        return $orderId;
+    }
 }

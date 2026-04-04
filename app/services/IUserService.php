@@ -6,13 +6,10 @@ use App\Models\User;
 
 interface IUserService {
     public function getAllUsers(): array;
-        public function updateUserStatus(int $userId, bool $isActive): bool;
+    public function deleteUser(int $userId): bool;
     public function createUser(User $user, string $password): array;
-    public function authenticateUser($email, $password): ?User;
-    public function getUserById($id): ?User;
-    public function getUserByEmail($email): ?User;
-    public function updateUser(User $user): bool;
-    public function changeUserPassword($id, $newPassword): bool;
-    public function changeUserEmail($id, $newEmail): bool;
-    public function deleteUser($id): bool;
+    public function authenticateUser(string $email, string $password): ?User;
+    public function getUserById(int $id): ?User;
+    public function getUserByEmail(string $email): ?User;
+    public function changeUserPassword(int $id, string $newPassword): bool;
 }

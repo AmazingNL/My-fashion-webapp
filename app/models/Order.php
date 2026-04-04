@@ -4,29 +4,29 @@ namespace App\Models;
 
 class Order
 {
-    private ?int $orderId;
-    private int $userId;
-    private string $status;
-    private float $totalAmount;
+    public int $orderId;
+    public int $userId;
+    public OrderStatus $status;
+    public float $totalAmount;
 
-    private string $shippingAddress;
-    private string $billingAddress;
+    public string $shippingAddress;
+    public string $billingAddress;
 
-    private string $paymentMethod;
-    private string $paymentStatus;
+    public string $paymentMethod;
+    public PaymentStatus $paymentStatus;
 
-    private ?string $createdAt;
-    private ?string $updatedAt;
+    public ?string $createdAt;
+    public ?string $updatedAt;
 
     public function __construct(
-        ?int $orderId = null,
+        int $orderId = 0,
         int $userId = 0,
-        string $status = 'pending',
+        OrderStatus $status = OrderStatus::PENDING,
         float $totalAmount = 0.0,
         string $shippingAddress = '',
         string $billingAddress = '',
         string $paymentMethod = 'credit_card',
-        string $paymentStatus = 'unpaid',
+        PaymentStatus $paymentStatus = PaymentStatus::PENDING,
         ?string $createdAt = null,
         ?string $updatedAt = null
     ) {
@@ -42,17 +42,5 @@ class Order
         $this->updatedAt = $updatedAt;
     }
 
-    public function getOrderId(): ?int { return $this->orderId; }
-    public function getUserId(): int { return $this->userId; }
-    public function getStatus(): string { return $this->status; }
-    public function getTotalAmount(): float { return $this->totalAmount; }
 
-    public function getShippingAddress(): string { return $this->shippingAddress; }
-    public function getBillingAddress(): string { return $this->billingAddress; }
-
-    public function getPaymentMethod(): string { return $this->paymentMethod; }
-    public function getPaymentStatus(): string { return $this->paymentStatus; }
-
-    public function getCreatedAt(): ?string { return $this->createdAt; }
-    public function getUpdatedAt(): ?string { return $this->updatedAt; }
 }

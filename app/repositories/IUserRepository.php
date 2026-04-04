@@ -11,10 +11,7 @@ interface IUserRepository
     public function findById($id): ?User;
     public function findByEmail(string $email): ?User;
     public function save(User $user): void;
-    public function update(User $user): void;
-    public function updateUserStatus(int $userId, bool $isActive): bool;
-    public function delete($id): void;
-    public function changePassword($id, $newPassword): void;
-    public function changeEmail($id, $newEmail): void;
+    public function deleteUser(int $userId): bool;
+    public function changePassword(int $id, string $newPassword): bool;
 
 }

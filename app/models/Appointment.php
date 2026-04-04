@@ -4,23 +4,33 @@ namespace App\Models;
 
 class Appointment
 {
-    public function __construct(
-        private ?int $appointmentId,
-        private int $userId,
-        private int $slotId,
-        private ?string $designType,
-        private ?string $notes,
-        private AppointmentStatus $status,
-        private ?string $createdAt,
-        private ?string $updatedAt
-    ) {}
+    public ?int $appointmentId;
+    public int $userId;
+    public int $slotId;
+    public ?string $designType;
+    public ?string $notes;
+    public AppointmentStatus $status;
+    public ?string $createdAt;
+    public ?string $updatedAt;
 
-    public function getAppointmentId(): ?int { return $this->appointmentId; }
-    public function getUserId(): int { return $this->userId; }
-    public function getSlotId(): int { return $this->slotId; }
-    public function getDesignType(): ?string { return $this->designType; }
-    public function getNotes(): ?string { return $this->notes; }
-    public function getStatus(): AppointmentStatus { return $this->status; }
-    public function getCreatedAt(): ?string { return $this->createdAt; }
-    public function getUpdatedAt(): ?string { return $this->updatedAt; }
+    public function __construct(
+        ?int $appointmentId,
+        int $userId,
+        int $slotId,
+        ?string $designType,
+        ?string $notes,
+        AppointmentStatus $status,
+        ?string $createdAt,
+        ?string $updatedAt
+    ) {
+        $this->appointmentId = $appointmentId;
+        $this->userId = $userId;
+        $this->slotId = $slotId;
+        $this->designType = $designType;
+        $this->notes = $notes;
+        $this->status = $status;
+        $this->createdAt = $createdAt;
+        $this->updatedAt = $updatedAt;
+    }
+
 }

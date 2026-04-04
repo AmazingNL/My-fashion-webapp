@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Services\IProductService;
 use App\Core\ControllerBase;
+use App\ViewModel\ProductDetailsVM;
+use App\ViewModel\ProductListVM;
 
 class ProductController extends ControllerBase
 {
@@ -14,116 +16,141 @@ class ProductController extends ControllerBase
         $this->productService = $productService;
     }
 
-    public function products(): void
-    {
-        $this->render('Products/ProductLists', ['title' => 'Products']);
-    }
 
     public function productLists(): void
     {
-        $productList = $this->productService->getActiveProducts();
-        $products = array_map(fn($p) => [
-            'productId' => $p->getId(),
-            'productName' => $p->getName(),
-            'description' => $p->getDescription(),
-            'price' => $p->getPrice(),
-            'category' => $p->getCategory(),
-            'stock' => $p->getStock(),
-            'image' => $p->getImage() ?: null,
-        ], $productList);
-
-        $this->jsonResponse($products, 200);
+        try {
+            $this->renderProductLists(
+                $this->buildProductListViewData()
+            );
+        } catch (\Throwable $e) {
+            $this->renderProductLists(
+                $this->buildEmptyProductListViewData()
+            );
+        }
     }
 
     public function productDetails(int $id): void
     {
-        // Simply render the HTML view - no data needed
-        $this->render('Products/ProductDetails', [
-            'title' => 'Product Details'
-        ]);
-    }
-
-    /**
-     * API endpoint to fetch product details as JSON
-     * Route: GET /api/products/{id}
-     */
-    public function viewProductDetail(int $productId): void
-    {
         try {
-            $result = $this->productService->getProductDetails($productId);
+            $result = $this->productService->getProductDetails($id);
             $product = $this->requireProductOr404($result);
-            $response = $this->mapProductResponse($result);
-            $response['similarProducts'] = $this->similarProductsPayload($productId, $product->getCategory());
-            $this->jsonResponse($response, 200);
+            $variants = $result['variants'] ?? [];
+            $productDetailsVm = new ProductDetailsVM(
+                $product,
+                $variants                
+            );
+            $this->render('Products/ProductDetails', [
+                'title' => 'Product Details',
+                'productDetailsVm' => $productDetailsVm,
+            ]);
         } catch (\Throwable $e) {
-            $this->handleApiException($e);
+            $this->render('Products/ProductDetails', [
+                'title' => 'Product Not Found',
+                'productDetailsVm' => new ProductDetailsVM()
+            ]);
         }
     }
 
-    /**
-     * Helper method to map product data to response format
-     */
-    private function mapProductResponse(array $result): array
-    {
-        $product = $result['product'];
-        $variants = $result['variants'] ?? [];
-
-        return [
-            'productId' => $product->getId(),
-            'productName' => $product->getName(),
-            'description' => $product->getDescription(),
-            'price' => $product->getPrice(),
-            'category' => $product->getCategory(),
-            'image' => $product->getImage() ?: '/assets/images/placeholder.jpg',
-            'variants' => array_map(fn($v) => [
-                'variantId' => $v->getVariantId(),
-                'size' => $v->getSize(),
-                'colour' => $v->getColour(),
-                'stockQuantity' => $v->getStockQuantity(),
-            ], $variants),
-        ];
-    }
-
-    private function requireProductOr404(array $result)
+    private function requireProductOr404(array $result): mixed
     {
         $product = $result['product'] ?? null;
         $errors = $result['errors'] ?? [];
-
         if ($product === null || !empty($errors)) {
-            $this->jsonResponse(['error' => 'Product not found'], 404);
-            exit; // or return; if your jsonResponse() already stops execution
+            return null;
         }
         return $product;
     }
 
-    private function similarProductsPayload(int $productId, string $category): array
+    private function filterProducts(array $products, string $search, string $category, ?float $minPrice, ?float $maxPrice): array
     {
-        $similar = $this->productService->getSimilarProducts(
-            productId: $productId,
-            category: $category,
-            limit: 4
-        );
-
-        return array_map([$this, 'mapSimilarProduct'], $similar);
+        $selectedCategories = array_values(array_filter(array_map('trim', explode(',', strtolower($category)))));
+        return array_values(array_filter($products, function ($product) use ($search, $selectedCategories, $minPrice, $maxPrice): bool {
+            $name = strtolower((string) ($product['productName'] ?? ''));
+            $description = strtolower((string) ($product['description'] ?? ''));
+            $productCategory = strtolower((string) ($product['category'] ?? ''));
+            $price = (float) ($product['price'] ?? 0);
+            if ($search !== '') {
+                $filed = strtolower($search);
+                if (!str_contains($name, $filed) && !str_contains($description, $filed) && !str_contains($productCategory, $filed) && !str_contains((string) $price, $filed)) {
+                    return false;
+                }
+            }
+            if (!empty($selectedCategories) && !in_array($productCategory, $selectedCategories, true)) {
+                return false;
+            }
+            if ($minPrice !== null && $price < $minPrice) {
+                return false;
+            }
+            if ($maxPrice !== null && $price > $maxPrice) {
+                return false;
+            }
+            return true;
+        }));
     }
 
-    private function mapSimilarProduct($p): array
+    private function extractFilterCategories(array $products): array
     {
+        $categories = [];
+        foreach ($products as $product) {
+            $category = trim((string) ($product['category'] ?? ''));
+            if ($category !== '') {
+                $categories[$category] = $category;
+            }
+        }
+        return array_values($categories);
+    }
+
+    private function buildProductListViewData(): array
+    {
+        $pageSize = max(1, (int) ($_GET['pageSize'] ?? 12));
+        $search = trim((string) ($_GET['search'] ?? ''));
+        $categoryInput = $_GET['category'] ?? '';
+        if (is_array($categoryInput)) {
+            $selectedCategory = implode(',', array_values(array_filter(array_map(static fn($item): string => trim((string) $item), $categoryInput))));
+        } else {
+            $selectedCategory = trim((string) $categoryInput);
+        }
+        $minPrice = isset($_GET['minPrice']) && $_GET['minPrice'] !== '' ? (float) $_GET['minPrice'] : null;
+        $maxPrice = isset($_GET['maxPrice']) && $_GET['maxPrice'] !== '' ? (float) $_GET['maxPrice'] : null;
+
+        $products = $this->productService->getActiveProducts();
+        $filterCategories = $this->extractFilterCategories($products);
+        $filteredProducts = $this->filterProducts($products, $search, $selectedCategory, $minPrice, $maxPrice);
+        $totalCount = count($filteredProducts);
+        $totalPages = max(1, (int) ceil($totalCount / $pageSize));
+        $page = min(max(1, (int) ($_GET['page'] ?? 1)), $totalPages);
+        $offset = ($page - 1) * $pageSize;
+        $pagedProducts = array_slice($filteredProducts, $offset, $pageSize);
+
         return [
-            'productId' => $p->getId(),
-            'productName' => $p->getName(),
-            'price' => $p->getPrice(),
-            'category' => $p->getCategory(),
-            'image' => $p->getImage() ?: '/assets/images/placeholder.jpg',
+            'title' => 'Products',
+            'productListVm' => new ProductListVM($pagedProducts, $totalCount, $page, $pageSize),
+            'filterCategories' => $filterCategories,
+            'currentFilters' => [
+                'search' => $search,
+                'category' => $selectedCategory,
+                'minPrice' => $minPrice,
+                'maxPrice' => $maxPrice,
+                'pageSize' => $pageSize,
+            ],
         ];
     }
 
-    private function handleApiException(\Throwable $e): void
+    private function buildEmptyProductListViewData(): array
     {
-        error_log((string) $e);
-        $this->jsonResponse(['error' => 'Server error'], 500);
+        return [
+            'title' => 'Products',
+            'productListVm' => new ProductListVM(),
+            'filterCategories' => [],
+            'currentFilters' => [],
+        ];
     }
 
+    private function renderProductLists(array $viewData): void
+    {
+        $this->render('Products/ProductLists', $viewData);
+    }
 
 }
 

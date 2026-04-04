@@ -13,98 +13,78 @@ class Router
     public function dispatch(): void
     {
         $dispatcher = simpleDispatcher(function (RouteCollector $r) {
-            $r->addRoute('GET', '/', ['App\Controllers\AuthController', 'showLogin']);
-            $r->addRoute('POST', '/login', ['App\Controllers\AuthController', 'login']);
-            $r->addRoute('GET', '/showRegistrationForm', ['App\Controllers\UserController', 'showRegistrationForm']);
-            $r->addRoute('GET', '/viewUsers', ['App\Controllers\UserController', 'viewUsers']);
-            $r->addRoute('POST', '/registerUser', ['App\Controllers\UserController', 'registerUser']);
-            $r->addRoute('POST', '/logout', ['App\Controllers\AuthController', 'logout']);
-            $r->addRoute('GET', '/aboutUs', ['App\Controllers\UserController', 'aboutUs']);
+            $r->get('/', ['App\Controllers\AuthController', 'showLogin']);
+            $r->post('/login', ['App\Controllers\AuthController', 'login']);
+            $r->get('/showRegistrationForm', ['App\Controllers\UserController', 'showRegistrationForm']);
+            $r->get('/viewUsers', ['App\Controllers\UserController', 'viewUsers']);
+            $r->post('/registerUser', ['App\Controllers\UserController', 'registerUser']);
+            $r->post('/logout', ['App\Controllers\AuthController', 'logout']);
+            $r->get('/aboutUs', ['App\Controllers\UserController', 'aboutUs']);
             // Forgot password
-            $r->addRoute('GET', '/forgotPassword', ['App\Controllers\AuthController', 'showForgotPassword']);
-            $r->addRoute('POST', '/forgotPassword', ['App\Controllers\AuthController', 'requestReset']);
+            $r->get('/forgotPassword', ['App\Controllers\AuthController', 'showForgotPassword']);
+            $r->post('/forgotPassword', ['App\Controllers\AuthController', 'requestReset']);
 
             // Reset code verification page
-            $r->addRoute('GET', '/reset-password', ['App\Controllers\AuthController', 'showResetCode']);
-            $r->addRoute('POST', '/reset-password/verify', ['App\Controllers\AuthController', 'verifyResetCode']);
+            $r->get('/reset-password', ['App\Controllers\AuthController', 'showResetCode']);
+            $r->post('/reset-password/verify', ['App\Controllers\AuthController', 'verifyResetCode']);
 
 
 
             /// Product routes
-            $r->addRoute('GET', '/productLists', ['App\Controllers\ProductController', 'productLists']);
-            $r->addRoute('GET', '/products', ['App\Controllers\ProductController', 'products']);
-            $r->addRoute('GET', '/products/{id}', ['App\Controllers\ProductController', 'productDetails']);
-            $r->addRoute('GET', '/api/products/{id}', ['App\Controllers\ProductController', 'viewProductDetail']);
+            $r->get('/productLists', ['App\Controllers\ProductController', 'productLists']);
+            $r->get('/products/{id}', ['App\Controllers\ProductController', 'productDetails']);
 
 
             // Cart routes
-            $r->addRoute('GET', '/viewCart', ['App\Controllers\CartController', 'viewCart']);
-            $r->addRoute('POST', '/addToBasket', ['App\Controllers\CartController', 'addToBasket']);
-            $r->addRoute('POST', '/updateQuantity', ['App\Controllers\CartController', 'updateQuantity']);
-            $r->addRoute('POST', '/removeFromBasket', ['App\Controllers\CartController', 'removeFromBasket']);
-            $r->addRoute('POST', '/clearBasket', ['App\Controllers\CartController', 'clearBasket']);
-            $r->addRoute('GET', '/getBasketCount', ['App\Controllers\CartController', 'getBasketCount']);
+            $r->get('/viewCart', ['App\Controllers\CartController', 'viewCart']);
+            $r->post('/addToBasket', ['App\Controllers\CartController', 'addToBasket']);
+            $r->post('/updateQuantity', ['App\Controllers\CartController', 'updateQuantity']);
+            $r->post('/removeFromBasket', ['App\Controllers\CartController', 'removeFromBasket']);
+            $r->post('/clearBasket', ['App\Controllers\CartController', 'clearBasket']);
 
 
             // Favourite routes
-            $r->addRoute('GET', '/favourites', ['App\Controllers\FavouriteController', 'viewFavourites']);
-            $r->addRoute('GET', '/api/favourites/list', ['App\Controllers\FavouriteController', 'getFavouriteList']);
-            $r->addRoute('GET', '/api/favourites/products', ['App\Controllers\FavouriteController', 'getFavouriteProducts']);
-            $r->addRoute('GET', '/api/favourites/count', ['App\Controllers\FavouriteController', 'getFavouriteCount']);
-            $r->addRoute('POST', '/api/favourites/toggle', ['App\Controllers\FavouriteController', 'toggleFavourite']);
-            $r->addRoute('POST', '/api/favourites/clear', ['App\Controllers\FavouriteController', 'clearFavourites']);
+            $r->get('/favourites', ['App\Controllers\FavouriteController', 'viewFavourites']);
+            $r->post('/favourites/toggle', ['App\Controllers\FavouriteController', 'toggleFavourite']);
+            $r->post('/favourites/clear', ['App\Controllers\FavouriteController', 'clearFavourites']);
 
-            // Admin routes
-            $r->addRoute('GET', '/admin/dashboard', ['App\Controllers\AdminController', 'dashboard']);
-            $r->addRoute('GET', '/admin/users', ['App\Controllers\AdminController', 'manageUsers']);
-            $r->addRoute('GET', '/admin/products', ['App\Controllers\AdminController', 'manageProducts']);
-            $r->addRoute('GET', '/admin/addProductForm', ['App\Controllers\AdminController', 'addProductForm']);
-            $r->addRoute('POST', '/admin/addProduct', ['App\Controllers\AdminController', 'addProduct']);
-            $r->addRoute('GET', '/admin/activity', ['App\Controllers\AdminController', 'viewLogs']);
-            $r->addRoute('GET', '/admin/activity-logs', ['App\Controllers\ActivityLogController', 'adminIndex']);
-            $r->addRoute('GET', '/admin/activity-logs/api', ['App\Controllers\ActivityLogController', 'apiList']);
-            $r->addRoute('POST', '/admin/activity-logs/export', ['App\Controllers\ActivityLogController', 'export']);
-            $r->addRoute('POST', '/admin/activity-logs/purge', ['App\Controllers\ActivityLogController', 'purge']);
-            $r->addRoute('POST', '/admin/activity-logs/clear', ['App\Controllers\ActivityLogController', 'clear']);
-            $r->addRoute('GET', '/admin/orders', ['App\Controllers\AdminController', 'manageOrders']);
-            $r->addRoute('POST', '/admin/users/status', ['App\Controllers\AdminController', 'updateUserStatus']);
-            $r->addRoute('POST', '/admin/products/delete', ['App\Controllers\AdminController', 'deleteProduct']);
-            $r->addRoute('GET', '/admin/products/edit/{id}', ['App\Controllers\AdminController', 'editProductForm']);
-            $r->addRoute('POST', '/admin/products/update', ['App\Controllers\AdminController', 'updateProduct']);
-            $r->addRoute('GET', '/admin/orders/api', ['App\Controllers\OrderController', 'adminApiList']);
-            $r->addRoute('GET', '/admin/orders/{id:\d+}/items/api', ['App\Controllers\OrderController', 'adminApiItems']);
-            $r->addRoute('POST', '/admin/orders/{id:\d+}/status/api', ['App\Controllers\OrderController', 'adminApiUpdateStatus']);
-            $r->addRoute('GET', '/admin/orders/{id:\d+}', ['App\Controllers\AdminController', 'orderShow']);
-            $r->addRoute('GET', '/admin/orders/{id:\d+}/items', ['App\Controllers\AdminController', 'orderItems']);
-            // API for slots
-            $r->addRoute('GET', '/api/appointments/slots', ['App\Controllers\AppointmentController', 'apiAvailableSlots']);
-            // Admin appointment routes
-            $r->addRoute('GET', '/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
-            $r->addRoute('POST', '/admin/appointments/slots/add', ['App\Controllers\AppointmentController', 'adminAddSlot']);
-            $r->addRoute('POST', '/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
+            // Appointment routes
+
+            $r->get('/admin/dashboard', ['App\Controllers\AdminController', 'dashboard']);
+            $r->get('/admin/users', ['App\Controllers\AdminController', 'manageUsers']);
+            $r->get('/admin/products', ['App\Controllers\AdminController', 'manageProducts']);
+            $r->get('/admin/addProductForm', ['App\Controllers\AdminController', 'addProductForm']);
+            $r->post('/admin/addProduct', ['App\Controllers\AdminController', 'addProduct']);
+            $r->post('/admin/users/delete', ['App\Controllers\AdminController', 'deleteUser']);
+            $r->post('/admin/products/delete', ['App\Controllers\AdminController', 'deleteProduct']);
+            $r->get('/admin/products/edit/{id}', ['App\Controllers\AdminController', 'editProductForm']);
+            $r->post('/admin/products/update', ['App\Controllers\AdminController', 'updateProduct']);
+            $r->get('/admin/orders', ['App\Controllers\AdminController', 'manageOrders']);
+            $r->get('/admin/orders/{id:\d+}', ['App\Controllers\AdminController', 'orderShow']);
+            $r->get('/admin/orders/{id:\d+}/items', ['App\Controllers\AdminController', 'orderItems']);
+            $r->post('/admin/orders/{id:\d+}/status', ['App\Controllers\OrderController', 'adminUpdateStatus']);
+            $r->get('/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
+            $r->post('/admin/appointments/slots/add', ['App\Controllers\AppointmentController', 'adminAddSlot']);
+            $r->post('/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
 
 
             // Orders + Checkout
-            $r->addRoute('GET', '/orders', ['App\Controllers\OrderController', 'index']);
-            $r->addRoute('GET', '/orders/{id:\d+}', ['App\Controllers\OrderController', 'show']);
-            $r->addRoute('POST', '/orders/{id:\d+}/cancel', ['App\Controllers\OrderController', 'cancel']);
-            $r->addRoute('GET', '/checkout', ['App\Controllers\CheckoutController', 'showCheckout']);
-            $r->addRoute('POST', '/checkout/place', ['App\Controllers\CheckoutController', 'processCheckout']);
-            $r->addRoute('GET', '/checkout/confirmation/{id:\d+}', ['App\Controllers\CheckoutController', 'confirmation']);
-            // Orders API
-            $r->addRoute('GET', '/api/orders', ['App\Controllers\OrderController', 'apiList']);
-            $r->addRoute('GET', '/api/orders/{id:\d+}', ['App\Controllers\OrderController', 'apiShow']);
-            $r->addRoute('GET', '/api/orders/{id:\d+}/items', ['App\Controllers\OrderController', 'apiItems']);
+            $r->get('/orders', ['App\Controllers\OrderController', 'index']);
+            $r->get('/orders/{id:\d+}', ['App\Controllers\OrderController', 'show']);
+            $r->post('/orders/{id:\d+}/cancel', ['App\Controllers\OrderController', 'cancel']);
+            $r->get('/checkout', ['App\Controllers\CheckoutController', 'showCheckout']);
+            $r->post('/checkout/place', ['App\Controllers\CheckoutController', 'processCheckout']);
+            $r->get('/checkout/confirmation/{id:\d+}', ['App\Controllers\CheckoutController', 'confirmation']);
 
 
             // Customer appointment routes
-            $r->addRoute('GET', '/appointments', ['App\Controllers\AppointmentController', 'index']);
-            $r->addRoute('GET', '/appointments/book', ['App\Controllers\AppointmentController', 'bookForm']);
-            $r->addRoute('POST', '/appointments/book', ['App\Controllers\AppointmentController', 'book']);
-            $r->addRoute('GET', '/appointments/{id:\d+}/edit', ['App\Controllers\AppointmentController', 'editForm']);
-            $r->addRoute('POST', '/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
-            $r->addRoute('POST', '/appointments/{id:\d+}/save', ['App\Controllers\AppointmentController', 'updateDetails']);
-            $r->addRoute('POST', '/appointments/{id:\d+}/cancel', ['App\Controllers\AppointmentController', 'cancel']);
+            $r->get('/appointments', ['App\Controllers\AppointmentController', 'index']);
+            $r->get('/appointments/book', ['App\Controllers\AppointmentController', 'bookForm']);
+            $r->post('/appointments/book', ['App\Controllers\AppointmentController', 'book']);
+            $r->get('/appointments/{id:\d+}/edit', ['App\Controllers\AppointmentController', 'editForm']);
+            $r->post('/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
+            $r->post('/appointments/{id:\d+}/save', ['App\Controllers\AppointmentController', 'updateDetails']);
+            $r->post('/appointments/{id:\d+}/cancel', ['App\Controllers\AppointmentController', 'cancel']);
 
 
 
@@ -144,10 +124,8 @@ class Router
                 switch ($class) {
                     case \App\Controllers\UserController::class:
                         $userRepository = new \App\Repositories\UserRepository();
-                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
                         $userService = new \App\Services\UserService($userRepository);
-                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
-                        $controller = new $class($userService, $activityLogService);
+                        $controller = new $class($userService);
                         break;
 
                     case \App\Controllers\ProductController::class:
@@ -158,10 +136,8 @@ class Router
 
                     case \App\Controllers\CartController::class:
                         $productRepository = new \App\Repositories\ProductRepository();
-                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
                         $cartService = new \App\Services\CartService($productRepository);
-                        $activityLogService = new \App\services\ActivityLogService($activityLogRepository);
-                        $controller = new $class($cartService, $activityLogService);
+                        $controller = new $class($cartService);
                         break;
 
                     case \App\Controllers\CheckoutController::class:
@@ -173,29 +149,24 @@ class Router
                         $orderItemService = new \App\Services\OrderItemService($orderItemRepository);
                         $orderService = new \App\Services\OrderService($orderRepository, $orderItemService, $cartService);
 
-                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
-                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
-
-                        $controller = new $class($cartService, $orderService, $orderItemService, $activityLogService);
+                        $controller = new $class($cartService, $orderService, $orderItemService);
                         break;
 
 
                     case \App\Controllers\FavouriteController::class:
                         $productRepository = new \App\Repositories\ProductRepository();
-                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
                         $productService = new \App\Services\ProductService($productRepository);
-                        $activityLogService = new \App\services\ActivityLogService($activityLogRepository);
-                        $controller = new $class($productService, $activityLogService);
+                        $controller = new $class($productService);
                         break;
 
                     case \App\Controllers\OrderController::class:
-                        $productRepository = new \App\Repositories\ProductRepository();
                         $orderRepository = new \App\Repositories\OrderRepository();
                         $orderItemRepository = new \App\Repositories\OrderItemRepository();
                         $orderItemService = new \App\Services\OrderItemService($orderItemRepository);
+                        $productRepository = new \App\Repositories\ProductRepository();
                         $cartService = new \App\Services\CartService($productRepository);
                         $orderService = new \App\Services\OrderService($orderRepository, $orderItemService, $cartService);
-                        $controller = new $class($orderService, $cartService, $orderItemService);
+                        $controller = new $class($orderService, $orderItemService);
                         break;
 
 
@@ -210,11 +181,9 @@ class Router
                     case \App\Controllers\AdminController::class:
                         $productRepository = new \App\Repositories\ProductRepository();
                         $userRepository = new \App\Repositories\UserRepository();
-                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
 
                         $productService = new \App\Services\ProductService($productRepository);
                         $userService = new \App\Services\UserService($userRepository);
-                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
 
                         // Orders dependencies (same pattern your project uses)
                         $orderRepository = new \App\Repositories\OrderRepository();
@@ -226,24 +195,13 @@ class Router
                         $appointmentRepository = new \App\Repositories\AppointmentRepository();
                         $appointmentSlotRepository = new \App\Repositories\AppointmentSlotRepository();
                         $appointmentService = new \App\Services\AppointmentService($appointmentRepository, $appointmentSlotRepository);
-
                         $controller = new $class(
                             $productService,
                             $userService,
-                            $activityLogService,
                             $orderService,
                             $appointmentService
                         );
-
                         break;
-
-
-                    case \App\Controllers\ActivityLogController::class:
-                        $activityLogRepository = new \App\Repositories\ActivityLogRepository();
-                        $activityLogService = new \App\Services\ActivityLogService($activityLogRepository);
-                        $controller = new $class($activityLogService);
-                        break;
-
 
                     case \App\Controllers\AuthController::class:
                         $userRepository = new \App\Repositories\UserRepository();

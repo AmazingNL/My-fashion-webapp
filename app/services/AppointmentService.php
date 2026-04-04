@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Models\Appointment;
 use App\Models\AppointmentSlot;
 use App\Models\AppointmentStatus;
@@ -16,14 +17,9 @@ final class AppointmentService implements IAppointmentService
     ) {
     }
 
-    public function autoCancelPastAppointments(): int
-    {
-        return $this->appointments->autoCancelPastAppointments();
-    }
-
     public function getUserAppointments(int $userId): array
     {
-        $this->autoCancelPastAppointments();
+        $this->appointments->autoCancelPastAppointments();
         return $this->appointments->findByUserId($userId);
     }
 
@@ -44,7 +40,7 @@ final class AppointmentService implements IAppointmentService
         try {
             $slotRow = $this->slots->lockAvailableSlotForUpdate($slotId);
             if (!$slotRow) {
-                throw new \RuntimeException("Slot not available anymore.");
+                throw new Exception("Slot not available anymore.");
             }
 
             // mark slot unavailable
@@ -67,7 +63,7 @@ final class AppointmentService implements IAppointmentService
             return $id;
         } catch (\Throwable $e) {
             $this->slots->rollBack();
-            throw $e;
+            throw new Exception($e->getMessage(), 0, $e);
         }
     }
 
@@ -75,11 +71,11 @@ final class AppointmentService implements IAppointmentService
     {
         $current = $this->appointments->findById($appointmentId);
         if (!$current || (int) $current['userId'] !== $userId) {
-            throw new \RuntimeException("Appointment not found.");
+            throw new Exception("Appointment not found.");
         }
 
         if (in_array($current['status'], ['CANCELLED', 'COMPLETED'], true)) {
-            throw new \RuntimeException("You can't change a cancelled/completed appointment.");
+            throw new Exception("You can't change a cancelled/completed appointment.");
         }
 
         $oldSlotId = (int) $current['slotId'];
@@ -88,7 +84,7 @@ final class AppointmentService implements IAppointmentService
         try {
             $slotRow = $this->slots->lockAvailableSlotForUpdate($newSlotId);
             if (!$slotRow) {
-                throw new \RuntimeException("New slot not available.");
+                throw new Exception("New slot not available.");
             }
 
             // reserve new, free old
@@ -103,7 +99,7 @@ final class AppointmentService implements IAppointmentService
             $this->slots->commit();
         } catch (\Throwable $e) {
             $this->slots->rollBack();
-            throw $e;
+            throw new Exception($e->getMessage(), 0, $e);
         }
     }
 
@@ -111,7 +107,7 @@ final class AppointmentService implements IAppointmentService
     {
         $current = $this->appointments->findById($appointmentId);
         if (!$current || (int) $current['userId'] !== $userId) {
-            throw new \RuntimeException("Appointment not found.");
+            throw new Exception("Appointment not found.");
         }
         $this->appointments->updateDetails($appointmentId, $designType, $notes);
     }
@@ -120,7 +116,7 @@ final class AppointmentService implements IAppointmentService
     {
         $current = $this->appointments->findById($appointmentId);
         if (!$current || (int) $current['userId'] !== $userId) {
-            throw new \RuntimeException("Appointment not found.");
+            throw new Exception("Appointment not found.");
         }
 
         if (in_array($current['status'], ['CANCELLED', 'COMPLETED'], true)) {
@@ -136,13 +132,13 @@ final class AppointmentService implements IAppointmentService
             $this->slots->commit();
         } catch (\Throwable $e) {
             $this->slots->rollBack();
-            throw $e;
+            throw new Exception($e->getMessage(), 0, $e);
         }
     }
 
     public function adminGetAllAppointments(): array
     {
-        $this->autoCancelPastAppointments();
+        $this->appointments->autoCancelPastAppointments();
         return $this->appointments->getAllWithSlot();
     }
 
@@ -152,13 +148,62 @@ final class AppointmentService implements IAppointmentService
         return $this->slots->create($slot);
     }
 
+    public function adminAddMonthlySlots(
+        string $startDate,
+        string $firstStartTime,
+        string $firstEndTime,
+        string $secondStartTime,
+        string $secondEndTime,
+        int $days = 30
+    ): int {
+        $start = \DateTimeImmutable::createFromFormat('Y-m-d', $startDate);
+        if (!$start || $start->format('Y-m-d') !== $startDate) {
+            throw new Exception('Invalid start date.');
+        }
+
+        if (
+            $firstStartTime === '' ||
+            $firstEndTime === '' ||
+            $secondStartTime === '' ||
+            $secondEndTime === ''
+        ) {
+            throw new Exception('Both daily time slots are required for monthly generation.');
+        }
+
+        if ($firstStartTime >= $firstEndTime || $secondStartTime >= $secondEndTime) {
+            throw new Exception('Each slot must have an end time later than start time.');
+        }
+
+        $ranges = [
+            [$firstStartTime, $firstEndTime],
+            [$secondStartTime, $secondEndTime],
+        ];
+
+        $created = 0;
+        for ($i = 0; $i < $days; $i++) {
+            $date = $start->modify('+' . $i . ' day')->format('Y-m-d');
+            $existing = $this->slots->findByDate($date);
+            $existingStarts = [];
+
+            foreach ($existing as $slot) {
+                $existingStarts[(string) ($slot->startTime ?? '')] = true;
+            }
+
+            foreach ($ranges as [$slotStart, $slotEnd]) {
+                if (isset($existingStarts[$slotStart])) {
+                    continue;
+                }
+
+                $this->slots->create(new AppointmentSlot(null, $date, $slotStart, $slotEnd, true, null));
+                $created++;
+            }
+        }
+
+        return $created;
+    }
+
     public function adminSetStatus(int $appointmentId, AppointmentStatus $status): void
     {
         $this->appointments->setStatus($appointmentId, $status);
-    }
-
-    public function adminSetSlotAvailability(int $slotId, bool $available): void
-    {
-        $this->slots->setAvailability($slotId, $available);
     }
 }

@@ -1,78 +1,32 @@
-<link rel="stylesheet" href="/assets/css/orderDetails.css">
+<?php
+/** @var \App\Models\Order $order */
+/** @var array $items */
+
+$orderId = (int) ($order->orderId ?? 0);
+$status = (string) ($order->status?->value ?? 'unknown');
+$paymentStatus = (string) ($order->paymentStatus?->value ?? 'pending');
+$totalAmount = (float) ($order->totalAmount ?? 0);
+$createdAt = (string) ($order->createdAt ?? '-');
+$shipping = (string) ($order->shippingAddress ?? '');
+$billing = (string) ($order->billingAddress ?? '');
+$success = (string) ($success ?? '');
+$error = (string) ($error ?? '');
+
+$itemsTotal = 0.0;
+foreach (($items ?? []) as $item) {
+    $itemsTotal += ((int) ($item['quantity'] ?? 0) * (float) ($item['price'] ?? 0));
+}
+?>
 
 <section class="orderDetails">
-    <header class="orderDetails__head">
-        <div>
-            <h1>Order #<?= htmlspecialchars((string) $order->getOrderId(), ENT_QUOTES, 'UTF-8') ?></h1>
-            <p class="orderDetails__sub">
-                Status: <strong><?= htmlspecialchars((string) $order->getStatus(), ENT_QUOTES, 'UTF-8') ?></strong>
-                · Payment:
-                <strong><?= htmlspecialchars((string) $order->getPaymentStatus(), ENT_QUOTES, 'UTF-8') ?></strong>
-            </p>
-        </div>
+    <?php if ($error !== ''): ?>
+        <div class="notice notice--error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
+    <?php if ($success !== ''): ?>
+        <div class="notice notice--success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
 
-        <div class="orderDetails__actions">
-            <a class="btn btn--ghost" href="/orders">Back</a>
-            <a class="btn btn--secondary" href="/products">Shop more</a>
-        </div>
-    </header>
+    <?php require __DIR__ . '/partials/OrderDetailsSummary.php'; ?>
 
-    <div class="grid grid--2">
-        <div class="card">
-            <h2>Summary</h2>
-            <div class="orderDetails__kv">
-                <div><span>Total</span><strong
-                        id="orderTotal"><?= htmlspecialchars((string) $order->getTotalAmount(), ENT_QUOTES, 'UTF-8') ?></strong>
-                </div>
-                <div>
-                    <span>Created</span><strong><?= htmlspecialchars((string) $order->getCreatedAt(), ENT_QUOTES, 'UTF-8') ?></strong>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Addresses</h2>
-            <div class="orderDetails__addr">
-                <div>
-                    <div class="orderDetails__label">Shipping</div>
-                    <div><?= nl2br(htmlspecialchars((string) $order->getShippingAddress(), ENT_QUOTES, 'UTF-8')) ?></div>
-                </div>
-                <div>
-                    <div class="orderDetails__label">Billing</div>
-                    <div><?= nl2br(htmlspecialchars((string) $order->getBillingAddress(), ENT_QUOTES, 'UTF-8')) ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card orderDetails__itemsCard">
-        <div class="orderDetails__itemsTop">
-            <h2>Items</h2>
-            <button class="btn btn--ghost" id="refreshItemsBtn" type="button">Refresh</button>
-        </div>
-
-        <div id="itemsError" class="notice notice--error" hidden></div>
-
-        <div id="itemsList" class="orderDetails__itemsList"></div>
-
-        <div id="itemsEmpty" class="empty-state" hidden>
-            <div class="empty-state__icon">🧾</div>
-            <div class="empty-state__text">No items found for this order</div>
-        </div>
-
-        <div class="orderDetails__itemsFooter">
-            <span>Items total</span>
-            <strong id="itemsTotal">€0.00</strong>
-        </div>
-    </div>
+    <?php require __DIR__ . '/partials/OrderDetailsItems.php'; ?>
 </section>
-
-<script id="orderDetailsData" type="application/json">
-<?= json_encode(
-    ['orderId' => (int) $order->getOrderId()],
-    JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
-) ?>
-</script>
-
-
-<script src="/assets/js/orderDetails.js"></script>

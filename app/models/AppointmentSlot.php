@@ -4,19 +4,28 @@ namespace App\Models;
 
 class AppointmentSlot
 {
-    public function __construct(
-        private ?int $slotId,
-        private string $appointmentDate,
-        private string $startTime,
-        private string $endTime,
-        private bool $isAvailable,
-        private ?string $createdAt
-    ) {}
+    public ?int $slotId;
+    public string $appointmentDate;
+    public string $startTime;
+    public string $endTime;
+    public bool $isAvailable;
+    public ?string $createdAt;
 
-    public function getSlotId(): ?int { return $this->slotId; }
-    public function getAppointmentDate(): string { return $this->appointmentDate; }
-    public function getStartTime(): string { return $this->startTime; }
-    public function getEndTime(): string { return $this->endTime; }
-    public function isAvailable(): bool { return $this->isAvailable; }
-    public function getCreatedAt(): ?string { return $this->createdAt; }
+    public function __construct(
+        ?int $slotId,
+        string $appointmentDate,
+        string $startTime,
+        string $endTime,
+        bool $isAvailable,
+        ?string $createdAt
+    ) {
+        $this->slotId = $slotId;
+        $this->appointmentDate = $appointmentDate;
+        $this->startTime = $startTime;
+        $this->endTime = $endTime;
+        $this->isAvailable = $isAvailable;
+        $this->createdAt = $createdAt;
+    }
+
+
 }

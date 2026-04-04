@@ -16,13 +16,8 @@
     <main class="main-content">
         <?php require $content; ?>
     </main>
-    <script src="/assets/js/csrf-fetch.js"></script>
-    <script src="/assets/js/csrf-fetch.js"></script>
-
     <?php if (!empty($pageScript)): ?>
         <script src="/assets/js/<?= htmlspecialchars($pageScript, ENT_QUOTES, 'UTF-8') ?>" defer></script>
-    <?php else: ?>
-        <script src="/assets/js/login.js" defer></script>
     <?php endif; ?>
 
 

@@ -22,12 +22,20 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
-        $userId = $this->currentUserId();
-        $appointments = $this->service->getUserAppointments((int) $userId);
+        $userId = (int) ($this->currentUserId() ?? 0);
+        if ($userId <= 0) {
+            $this->redirect('/?error=login_required');
+            return;
+        }
+
+            [$success, $error] = $this->consumeFlash('appointment');
+        $appointments = $this->service->getUserAppointments($userId);
 
         $this->render('Appointment/Index', [
             'title' => 'My Appointments',
-            'appointments' => $appointments
+            'appointments' => $appointments,
+            'success' => $success,
+            'error' => $error,
         ]);
     }
 
@@ -36,8 +44,24 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
+        $selectedDate = trim((string) $this->input('date', ''));
+            [$success, $error] = $this->consumeFlash('appointment');
+
+        $slots = [];
+        if ($selectedDate !== '') {
+            try {
+                $slots = $this->service->getAvailableSlotsByDate($selectedDate);
+            } catch (\Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+
         $this->render('Appointment/Book', [
-            'title' => 'Book Appointment'
+            'title' => 'Book Appointment',
+            'selectedDate' => $selectedDate,
+            'slots' => $slots,
+            'success' => $success,
+            'error' => $error,
         ]);
     }
 
@@ -53,7 +77,8 @@ final class AppointmentController extends ControllerBase
         $slotId = (int) $slotIdRaw;
 
         if ($slotId < 1) {
-            $this->redirect('/appointments/book?error=' . urlencode('Please select a valid time slot.'));
+            $this->setFlash('appointment', 'Please select a valid time slot.', 'error');
+            $this->redirect('/appointments/book');
             return;
         }
 
@@ -62,9 +87,12 @@ final class AppointmentController extends ControllerBase
 
         try {
             $id = $this->service->book($userId, $slotId, $designType, $notes);
-            $this->redirect('/appointments?success=booked&id=' . $id);
+            $this->setFlash('appointment', 'Appointment booked successfully.', 'success');
+            $this->redirect('/appointments');
         } catch (\Throwable $e) {
-            $this->redirect('/appointments/book?error=' . urlencode($e->getMessage()));
+            $this->setFlash('appointment', $e->getMessage(), 'error');
+            $date = trim((string) $this->input('date', ''));
+            $this->redirect('/appointments/book' . ($date !== '' ? '?date=' . urlencode($date) : ''));
         }
     }
 
@@ -73,9 +101,42 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAuth();
         Middleware::requireCustomer();
 
+        $userId = (int) ($this->currentUserId() ?? 0);
+        if ($userId <= 0) {
+            $this->redirect('/?error=login_required');
+            return;
+        }
+
+        $appointment = $this->findUserAppointment($userId, $id);
+        if ($appointment === null) {
+            $this->setFlash('appointment', 'Appointment not found.', 'error');
+            $this->redirect('/appointments');
+            return;
+        }
+
+        $selectedDate = trim((string) $this->input('date', ''));
+        if ($selectedDate === '') {
+            $selectedDate = (string) ($appointment['appointmentDate'] ?? '');
+        }
+
+        [$success, $error] = $this->consumeFlash('appointment');
+        $slots = [];
+        if ($selectedDate !== '') {
+            try {
+                $slots = $this->service->getAvailableSlotsByDate($selectedDate);
+            } catch (\Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+
         $this->render('Appointment/Edit', [
             'title' => 'Update Appointment',
-            'appointmentId' => $id
+            'appointmentId' => $id,
+            'appointment' => $appointment,
+            'selectedDate' => $selectedDate,
+            'slots' => $slots,
+            'success' => $success,
+            'error' => $error,
         ]);
     }
 
@@ -91,9 +152,12 @@ final class AppointmentController extends ControllerBase
 
         try {
             $this->service->updateAppointmentSlot($userId, $id, $newSlotId);
-            $this->redirect('/appointments?success=updated');
+            $this->setFlash('appointment', 'Appointment updated successfully.', 'success');
+            $this->redirect('/appointments');
         } catch (\Throwable $e) {
-            $this->redirect('/appointments/' . $id . '/edit?error=' . urlencode($e->getMessage()));
+            $this->setFlash('appointment', $e->getMessage(), 'error');
+            $date = trim((string) $this->input('date', ''));
+            $this->redirect('/appointments/' . $id . '/edit' . ($date !== '' ? '?date=' . urlencode($date) : ''));
         }
     }
 
@@ -109,9 +173,11 @@ final class AppointmentController extends ControllerBase
 
         try {
             $this->service->updateAppointmentDetails($userId, $id, $designType, $notes);
-            $this->redirect('/appointments?success=saved');
+            $this->setFlash('appointment', 'Details saved.', 'success');
+            $this->redirect('/appointments');
         } catch (\Throwable $e) {
-            $this->redirect('/appointments/' . $id . '/edit?error=' . urlencode($e->getMessage()));
+            $this->setFlash('appointment', $e->getMessage(), 'error');
+            $this->redirect('/appointments/' . $id . '/edit');
         }
     }
 
@@ -125,32 +191,12 @@ final class AppointmentController extends ControllerBase
 
         try {
             $this->service->cancel($userId, $id);
-            $this->redirect('/appointments?success=cancelled');
+            $this->setFlash('appointment', 'Appointment cancelled.', 'success');
+            $this->redirect('/appointments');
         } catch (\Throwable $e) {
-            $this->redirect('/appointments?error=' . urlencode($e->getMessage()));
+            $this->setFlash('appointment', $e->getMessage(), 'error');
+            $this->redirect('/appointments');
         }
-    }
-
-    // API endpoint for JS date picker
-    public function apiAvailableSlots(): void
-    {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
-
-        $date = (string) $this->input('date', '');
-        if (!$date)
-            $this->jsonResponse(['error' => 'date_required'], 400);
-
-        $slots = $this->service->getAvailableSlotsByDate($date);
-
-        $payload = array_map(fn($s) => [
-            'slotId' => $s->getSlotId(),
-            'appointmentDate' => $s->getAppointmentDate(),
-            'startTime' => $s->getStartTime(),
-            'endTime' => $s->getEndTime(),
-        ], $slots);
-
-        $this->jsonResponse(['slots' => $payload]);
     }
 
     // =========================
@@ -161,10 +207,13 @@ final class AppointmentController extends ControllerBase
     {
         Middleware::requireAdmin();
         $appointments = $this->service->adminGetAllAppointments();
+        [$success, $error] = $this->consumeFlash('admin');
 
         $this->render('Admin/Appointment/Index', [
             'title' => 'Appointments',
-            'appointments' => $appointments
+            'appointments' => $appointments,
+            'success' => $success,
+            'error' => $error,
         ], 'admin');
     }
 
@@ -176,12 +225,22 @@ final class AppointmentController extends ControllerBase
         $date = (string) $this->input('appointmentDate');
         $start = (string) $this->input('startTime');
         $end = (string) $this->input('endTime');
+        $bulkMonth = (string) $this->input('bulkMonth', '') === '1';
+        $secondStart = (string) $this->input('secondStartTime', '');
+        $secondEnd = (string) $this->input('secondEndTime', '');
 
         try {
-            $this->service->adminAddSlot($date, $start, $end);
-            $this->redirect('/admin/appointments?success=slot_added');
+            if ($bulkMonth) {
+                $created = $this->service->adminAddMonthlySlots($date, $start, $end, $secondStart, $secondEnd, 30);
+                $this->setFlash('admin', 'Monthly slots created: ' . $created, 'success');
+            } else {
+                $this->service->adminAddSlot($date, $start, $end);
+                $this->setFlash('admin', 'Slot added successfully.', 'success');
+            }
+            $this->redirect('/admin/appointments');
         } catch (\Throwable $e) {
-            $this->redirect('/admin/appointments?error=' . urlencode($e->getMessage()));
+            $this->setFlash('admin', $e->getMessage(), 'error');
+            $this->redirect('/admin/appointments');
         }
     }
 
@@ -190,9 +249,33 @@ final class AppointmentController extends ControllerBase
         Middleware::requireAdmin();
         $this->validateCsrf();
 
-        $status = AppointmentStatus::fromDb((string) $this->input('status'));
-        $this->service->adminSetStatus($id, $status);
+        try {
+            $status = AppointmentStatus::from((string) $this->input('status'));
+            $this->service->adminSetStatus($id, $status);
+        } catch (\ValueError $e) {
+            $this->setFlash('admin', 'Invalid appointment status.', 'error');
+            $this->redirect('/admin/appointments');
+            return;
+        } catch (\Throwable $e) {
+            $this->setFlash('admin', $e->getMessage(), 'error');
+            $this->redirect('/admin/appointments');
+            return;
+        }
 
-        $this->redirect('/admin/appointments?success=status_updated');
+        $this->setFlash('admin', 'Status updated.', 'success');
+        $this->redirect('/admin/appointments');
     }
+
+    private function findUserAppointment(int $userId, int $appointmentId): ?array
+    {
+        $appointments = $this->service->getUserAppointments($userId);
+        foreach ($appointments as $appointment) {
+            if ((int) ($appointment['appointmentId'] ?? 0) === $appointmentId) {
+                return $appointment;
+            }
+        }
+
+        return null;
+    }
+
 }

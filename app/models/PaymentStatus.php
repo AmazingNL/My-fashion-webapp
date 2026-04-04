@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-enum PaymentStatus {
-    case PENDING;
-    case COMPLETED;   
-    case FAILED;
+enum PaymentStatus: string {
+    case PENDING = 'pending';
+    case COMPLETED = 'completed';   
+    case FAILED = 'failed';
 
 }

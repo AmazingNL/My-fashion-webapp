@@ -13,7 +13,7 @@ interface IAppointmentSlotRepository
     public function findAvailableByDate(string $date): array;
 
     public function create(AppointmentSlot $slot): int;
-    public function setAvailability(int $slotId, bool $available): void;
+    public function setAvailability(int $slotId, bool $available): bool;
 
     public function lockAvailableSlotForUpdate(int $slotId): ?array; // row array
 

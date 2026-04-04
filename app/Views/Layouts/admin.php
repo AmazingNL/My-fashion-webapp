@@ -11,6 +11,11 @@
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/adminDashboard.css">
     <link rel="stylesheet" href="/assets/css/adminManageOrders.css">
+    <link rel="stylesheet" href="/assets/css/adminManageProducts.css">
+    <link rel="stylesheet" href="/assets/css/adminEditProduct.css">
+    <link rel="stylesheet" href="/assets/css/appointment.css">
+    <link rel="stylesheet" href="/assets/css/addProductForm.css">
+
 
 </head>
 
@@ -19,14 +24,10 @@
     <?php require __DIR__ . '/../Admin/partials/nav.php'; ?>
 
     <main class="admin-content">
+        <?php require __DIR__ . '/../Admin/partials/FlashMessage.php'; ?>
         <?php require $content; ?>
     </main>
 
-    <script src="/assets/js/adminManageProducts.js"></script>
-    <script src="/assets/js/adminManageOrders.js"></script>
-    <script src="/assets/js/adminManageUsers.js"></script>
-    <script src="/assets/js/csrf-fetch.js"></script>
-    <script src="/assets/js/admin.js"></script>
 
 </body>
 

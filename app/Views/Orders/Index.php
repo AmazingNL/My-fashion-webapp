@@ -1,16 +1,15 @@
 <?php
-// $orders is passed by OrderController::index() :contentReference[oaicite:6]{index=6}
-$rows = array_map(function ($o) {
-    return [
-        'orderId' => (int)$o->getOrderId(),
-        'status' => (string)$o->getStatus(),
-        'totalAmount' => (float)$o->getTotalAmount(),
-        'createdAt' => (string)$o->getCreatedAt(),
-        'paymentStatus' => (string)$o->getPaymentStatus(),
-    ];
-}, $orders ?? []);
+$orders = $orders ?? [];
+$statusFilter = (string) ($statusFilter ?? '');
+$search = (string) ($search ?? '');
+$success = (string) ($success ?? '');
+$error = (string) ($error ?? '');
+
+$canCancel = static function (string $status): bool {
+    $normalized = strtolower(trim($status));
+    return in_array($normalized, ['pending', 'processing', 'paid'], true);
+};
 ?>
-<link rel="stylesheet" href="/assets/css/orders.css">
 
 <section class="orders">
     <header class="orders__head">
@@ -20,47 +19,23 @@ $rows = array_map(function ($o) {
         </div>
 
         <div class="orders__actions">
-            <a class="btn btn--secondary" href="/products">Continue shopping</a>
-            <button class="btn btn--ghost" id="refreshOrdersBtn" type="button">Refresh</button>
+            <a class="btn btn--secondary" href="/productLists">Continue shopping</a>
+            <a class="btn btn--ghost" href="/orders">Refresh</a>
         </div>
     </header>
 
-    <div id="ordersError" class="notice notice--error" hidden></div>
-    <div id="ordersSuccess" class="notice notice--success" hidden></div>
+    <?php if ($error !== ''): ?>
+        <div class="notice notice--error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
 
-    <div class="card orders__toolbar">
-        <div class="field">
-            <label for="statusFilter">Filter by status</label>
-            <select id="statusFilter">
-                <option value="">All</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="paid">Completed</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-            </select>
-        </div>
+    <?php if ($success !== ''): ?>
+        <div class="notice notice--success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
 
-        <div class="field">
-            <label for="searchOrders">Search</label>
-            <input id="searchOrders" type="text" placeholder="Order #, status, payment..." />
-        </div>
-    </div>
+    <?php if (!empty($orders)): ?>
+        <?php require __DIR__ . '/partials/FilterForm.php'; ?>
+    <?php endif; ?>
 
-    <div id="ordersGrid" class="grid grid--3"></div>
+    <?php require __DIR__ . '/partials/OrderGrid.php'; ?>
 
-    <div id="ordersEmpty" class="empty-state" hidden>
-        <div class="empty-state__icon">🧺</div>
-        <div class="empty-state__text">No orders yet</div>
-        <a class="btn btn--primary" href="/products">Browse products</a>
-    </div>
 </section>
-
-<script id="ordersData" type="application/json">
-<?= json_encode(['orders' => $rows], JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
-</script>
-
-
-
-<script src="/assets/js/orders.js"></script>

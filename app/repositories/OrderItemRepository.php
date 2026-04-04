@@ -5,149 +5,88 @@ namespace App\Repositories;
 use App\Core\RepositoryBase;
 use App\Models\OrderItem;
 use PDO;
+use Throwable;
 
 class OrderItemRepository extends RepositoryBase implements IOrderItemRepository
 {
     private const TABLE = 'order_items';
+    private const ORDER_ITEM_DEFAULTS = [0, 0, 0, 0, 0, 0.0, null];
 
-public function getAll(): array
-{
-    $orderItems = [];
-
-    $stmt = $this->getConnection()->prepare("SELECT * FROM " . self::TABLE);
-    $stmt->execute();
-    $results = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-    foreach ($results as $row) {
-        $orderItems[] = new OrderItem(
-            (int)$row['orderItemId'],
-            (int)$row['productId'],
-            (int)$row['orderId'],
-            (int)$row['variantId'],
-            (int)$row['quantity'],
-            (float)$row['price'],
-            $row['createdAt']
-        );
-    }
-    return $orderItems;
-}
-
-
-    public function findById($id): ?OrderItem
+    public function getAll(): array
     {
-        $stmt = $this->getConnection()->prepare(
-            "SELECT * FROM " . self::TABLE . " WHERE orderItemId = :id"
-        );
-        $stmt->execute([':id' => (int) $id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$row) {
-            return null;
+        try {
+            $stmt = $this->getConnection()->prepare("SELECT * FROM " . self::TABLE);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            throw $this->dbError($e);
         }
-
-        return new OrderItem(
-            (int) $row['orderItemId'],
-            (int) $row['orderId'],
-            (int) $row['productId'],
-            (int) $row['variantId'],
-            (int) $row['quantity'],
-            (float) $row['price'],
-            $row['createdAt']
-        );
     }
 
 
-public function findByOrderId($orderId): array
-{
-    $orderItems = [];
-
-    $sql = "
-        SELECT 
-            oi.orderItemId, oi.orderId, oi.productId, oi.variantId, oi.quantity, oi.price, oi.createdAt,
-            p.productName AS productName,
-            p.category AS productCategory,
-            p.image       AS productImage,
-            v.size        AS variantSize,
-            v.colour       AS variantColour
-        FROM order_items oi
-        INNER JOIN products p ON p.productId = oi.productId
-        LEFT JOIN product_variants v ON v.variantId = oi.variantId
-        WHERE oi.orderId = :orderId
-        ORDER BY oi.orderItemId DESC
-    ";
-
-    $stmt = $this->getConnection()->prepare($sql);
-    $stmt->execute([':orderId' => (int)$orderId]);
-    $results = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-    foreach ($results as $row) {
-        $item = new OrderItem(
-            isset($row['orderItemId']) ? (int)$row['orderItemId'] : null,
-            (int)$row['orderId'],
-            (int)$row['productId'],
-            (int)$row['variantId'],
-            (int)$row['quantity'],
-            (float)$row['price'],
-            $row['createdAt'] ?? null
-        );
-
-        // attach joined info 
-        $item->setProductName($row['productName'] ?? null);
-        $item->setProductImage($row['productImage'] ?? null);
-        $item->setVariantSize($row['variantSize'] ?? null);
-        $item->setVariantColor($row['variantColour'] ?? null);
-        $item->setProductCategory($row['productCategory'] ?? null);
-
-        $orderItems[] = $item;
+    public function findById(int $id): ?OrderItem
+    {
+        try {
+            $stmt = $this->getConnection()->prepare(
+                "SELECT * FROM " . self::TABLE . " WHERE orderItemId = :id"
+            );
+            $stmt->execute([':id' => $id]);
+            $item = $stmt->fetchObject(OrderItem::class, self::ORDER_ITEM_DEFAULTS);
+            return $item instanceof OrderItem ? $item : null;
+        } catch (Throwable $e) {
+            throw $this->dbError($e);
+        }
     }
-    return $orderItems;
-}
+
+
+    public function findByOrderId(int $orderId): array
+    {
+        try {
+            $sql = "
+                SELECT
+                    oi.orderItemId,
+                    oi.orderId,
+                    oi.productId,
+                    oi.variantId,
+                    oi.quantity,
+                    oi.price,
+                    oi.createdAt
+                FROM order_items oi
+                WHERE oi.orderId = :orderId
+                ORDER BY oi.orderItemId DESC
+            ";
+
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([':orderId' => $orderId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            throw $this->dbError($e);
+        }
+    }
 
 
     public function save(OrderItem $orderItem): void
     {
-        $sql = "INSERT INTO " . self::TABLE . " (orderId, productId, variantId, quantity, price, createdAt)
-                VALUES (:orderId, :productId, :variantId, :quantity, :price, :createdAt)";
+        try {
+            $sql = "INSERT INTO " . self::TABLE . " (orderId, productId, variantId, quantity, price)
+                    VALUES (:orderId, :productId, :variantId, :quantity, :price)";
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([
-            ':orderId' => (int) $orderItem->getOrderId(),
-            ':productId' => (int) $orderItem->getProductId(),
-            ':variantId' => (int) $orderItem->getVariantId(),
-            ':quantity' => (int) $orderItem->getQuantity(),
-            ':price' => (float) $orderItem->getPrice(),
-            ':createdAt' => $orderItem->getCreatedAt(),
-        ]);
+            $stmt = $this->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':orderId' => (int) $orderItem->orderId,
+                ':productId' => (int) $orderItem->productId,
+                ':variantId' => (int) $orderItem->variantId,
+                ':quantity' => (int) $orderItem->quantity,
+                ':price' => (float) $orderItem->price,
+            ]);
+        } catch (Throwable $e) {
+            throw $this->dbError($e);
+        }
     }
 
-    public function update(OrderItem $orderItem): void
-    {
-        $sql = "UPDATE " . self::TABLE . "
-                SET orderId = :orderId,
-                    productId = :productId,
-                    variantId = :variantId,
-                    quantity = :quantity,
-                    price = :price,
-                    createdAt = :createdAt
-                WHERE orderItemId = :orderItemId";
 
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute([
-            ':orderId' => (int) $orderItem->getOrderId(),
-            'productId'=> (int) $orderItem->getProductId(),
-            ':variantId' => (int) $orderItem->getVariantId(),
-            ':quantity' => (int) $orderItem->getQuantity(),
-            ':price' => (float) $orderItem->getPrice(),
-            'createdAt'=> $orderItem->getCreatedAt(),
-            ':orderItemId' => (int) $orderItem->getOrderItemId(),
-        ]);
-    }
-
-    public function delete($id): void
+    private function dbError(Throwable $e): \RuntimeException
     {
-        $stmt = $this->getConnection()->prepare(
-            "DELETE FROM " . self::TABLE . " WHERE orderItemId = :id"
-        );
-        $stmt->execute([':id' => (int) $id]);
+        return new \RuntimeException('DB error ' . $e->getMessage(), 0, $e);
     }
 }

@@ -4,13 +4,12 @@ namespace App\Repositories;
 
 use App\Models\OrderItem;
 
-interface IOrderItemRepository {
+interface IOrderItemRepository
+{
 
     public function getAll(): array;
-    public function findById($id): ?OrderItem;
-    public function findByOrderId($orderId): array;
+    public function findById(int $id): ?OrderItem;
+    public function findByOrderId(int $orderId): array;
     public function save(OrderItem $orderItem): void;
-    public function update(OrderItem $orderItem): void;
-    public function delete($id): void;
 
 }

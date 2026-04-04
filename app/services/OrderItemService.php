@@ -14,39 +14,24 @@ class OrderItemService implements IOrderItemService
         $this->orderItemRepository = $orderItemRepository;
     }
 
-    /**
-     * Save many order items for one order.
-     * $cartItems must look like CartService::getCartItems() rows:
-     * productId, variantId, quantity, price
-     */
-    public function createFromCart(int $orderId, array $cartItems): array
+    // Create order items from cart snapshot and persist to DB.
+    public function createFromCart(int $orderId, array $cartItems): void
     {
-        $created = [];
-
         foreach ($cartItems as $item) {
             $orderItem = new OrderItem(
-                null,
+                0,
                 $orderId,
-                (int)($item['productId'] ?? 0),
-                (int)($item['variantId'] ?? 0),
-                (int)($item['quantity'] ?? 0),
-                (float)($item['price'] ?? 0),
-                $item['createdAt']
+                (int) ($item['productId'] ?? 0),
+                (int) ($item['variantId'] ?? 0),
+                (int) ($item['quantity'] ?? 0),
+                (float) ($item['price'] ?? 0),
+                null
             );
-
-            // your repo interface uses save()
             $this->orderItemRepository->save($orderItem);
-
-            $created[] = [
-                'productName' => (string)($item['name'] ?? $item['productName'] ?? 'Product'),
-                'quantity' => (int)$orderItem->getQuantity(),
-                'price' => (float)$orderItem->getPrice(),
-            ];
         }
-
-        return $created;
     }
 
+    // Retrieve all items for an order.
     public function getByOrderId(int $orderId): array
     {
         return $this->orderItemRepository->findByOrderId($orderId);

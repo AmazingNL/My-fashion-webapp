@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-enum OrderStatus {
-    case PENDING;
-    case PROCESSING;   
-    case PAID;
-    case SHIPPED;
-    case CANCELLED;
-    case DELIVERED;
+enum OrderStatus: string {
+    case PENDING = 'pending';
+    case PROCESSING = 'processing';   
+    case PAID = 'paid';
+    case SHIPPED = 'shipped';
+    case CANCELLED = 'cancelled';
+    case DELIVERED = 'delivered';
 
 }
