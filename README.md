@@ -78,13 +78,6 @@ UNION ALL SELECT 'orders', COUNT(*) FROM orders;
 "
 ```
 
-If `SHOW TABLES` is empty after import, your dump file likely does not contain table/data statements.
-Check quickly with:
-
-```bash
-grep -n "CREATE TABLE\|INSERT INTO" lecturer_full_dump.sql | head
-```
-
 ## 4. Architecture, Patterns, And File References
 
 This is a custom PHP MVC project using Controller -> Service -> Repository layering.
