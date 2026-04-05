@@ -49,7 +49,6 @@ This project follows the class Docker setup style:
 
 ### Included export files
 - Root export for submission: `lecturer_full_dump.sql`
-- Additional copies: `database/lecturer_full_dump.sql`, `database/zzz_full_dump.sql`
 
 ### Generate a fresh export
 ```bash
