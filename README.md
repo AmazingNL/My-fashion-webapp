@@ -48,16 +48,41 @@ This project follows the class Docker setup style:
 ## 3. Database Export And Import
 
 ### Included export files
-- Root export for submission: `lecturer_full_dump.sql`
+- Root export: `lecturer_full_dump.sql`
 
-### Generate a fresh export
+### Generate a fresh export (UTF-8 SQL)
 ```bash
-docker exec my-fashion-webapp-mysql-1 mariadb-dump -uroot -psecret123 --databases developmentdb --routines --events --triggers --single-transaction > lecturer_full_dump.sql
+docker compose exec -T mysql mariadb-dump \
+	-uroot -psecret123 \
+	--databases developmentdb \
+	--routines --events --triggers \
+	--single-transaction \
+	--default-character-set=utf8mb4 \
+	> lecturer_full_dump.sql
 ```
 
 ### Import export file
 ```bash
-docker exec -i my-fashion-webapp-mysql-1 mariadb -uroot -psecret123 developmentdb < lecturer_full_dump.sql
+iconv -f UTF-16LE -t UTF-8 lecturer_full_dump.sql > lecturer_full_dump_utf8.sql
+docker compose exec -T mysql mariadb -uroot -psecret123 developmentdb < lecturer_full_dump_utf8.sql
+```
+
+### Verify data loaded
+```bash
+docker compose exec -T mysql mariadb -uroot -psecret123 -e "
+USE developmentdb;
+SHOW TABLES;
+SELECT 'users' AS table_name, COUNT(*) AS rows_count FROM users
+UNION ALL SELECT 'products', COUNT(*) FROM products
+UNION ALL SELECT 'orders', COUNT(*) FROM orders;
+"
+```
+
+If `SHOW TABLES` is empty after import, your dump file likely does not contain table/data statements.
+Check quickly with:
+
+```bash
+grep -n "CREATE TABLE\|INSERT INTO" lecturer_full_dump.sql | head
 ```
 
 ## 4. Architecture, Patterns, And File References
