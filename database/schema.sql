@@ -57,11 +57,11 @@ CREATE TABLE product_variants (
     INDEX idx_product (productId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Shopping Cart Table (session-based backup)
+-- Shopping Cart Table
 CREATE TABLE cart_items (
     cartItemId INT AUTO_INCREMENT PRIMARY KEY,
     userId INT NULL,
-    sessionId VARCHAR(255) NULL,
+    cartToken VARCHAR(255) NULL,
     productId INT NOT NULL,
     variantId INT NULL,
     quantity INT DEFAULT 1,
@@ -70,7 +70,8 @@ CREATE TABLE cart_items (
     FOREIGN KEY (productId) REFERENCES products(productId) ON DELETE CASCADE,
     FOREIGN KEY (variantId) REFERENCES product_variants(variantId) ON DELETE SET NULL,
     INDEX idx_user (userId),
-    INDEX idx_session (sessionId)
+    INDEX idx_cart_token (cartToken),
+    UNIQUE KEY uniq_user_product_variant (userId, productId, variantId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Orders Table

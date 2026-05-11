@@ -11,6 +11,15 @@ use RuntimeException;
 
 class OrderService implements IOrderService
 {
+    private const ALLOWED_STATUS_TRANSITIONS = [
+        'pending' => ['processing', 'cancelled'],
+        'processing' => ['paid', 'shipped', 'cancelled'],
+        'paid' => ['shipped', 'cancelled'],
+        'shipped' => ['delivered'],
+        'delivered' => [],
+        'cancelled' => [],
+    ];
+
     private IOrderRepository $orderRepo;
     private OrderItemService $orderItemService;
     private CartService $cartService;
@@ -116,25 +125,15 @@ class OrderService implements IOrderService
     }
 
     /** Admin: update status using enum */
-    public function adminUpdateStatus(int $orderId, OrderStatus $newStatus): bool
+    public function adminUpdateStatus(int $orderId, OrderStatus $newStatus): array
     {
         $order = $this->requireOrder($orderId);
 
         $old = strtolower($order->status->value);
         $new = strtolower($newStatus->value);
 
-        // Basic transition rules
-        $allowed = [
-            'pending' => ['processing', 'cancelled'],
-            'processing' => ['paid', 'shipped', 'cancelled'],
-            'paid' => ['shipped', 'cancelled'],
-            'shipped' => ['delivered'],
-            'delivered' => [],
-            'cancelled' => [],
-        ];
-
-        if (!isset($allowed[$old]) || !in_array($new, $allowed[$old], true)) {
-            throw new RuntimeException("Invalid status transition: {$old} -> {$new}");
+        if (!isset(self::ALLOWED_STATUS_TRANSITIONS[$old]) || !in_array($new, self::ALLOWED_STATUS_TRANSITIONS[$old], true)) {
+            throw new RuntimeException("Invalid status transition: {$old} -> {$new}. " . $this->allowedTransitionsMessage());
         }
 
         // Auto payment update rule:
@@ -146,9 +145,26 @@ class OrderService implements IOrderService
             $payment = strtolower(PaymentStatus::FAILED->name); // "failed"
         }
 
-        // Update status (and payment if needed)
-        return (bool) $this->orderRepo->updateStatus($orderId, $new, $payment);
+        $updated = (bool) $this->orderRepo->updateStatus($orderId, $new, $payment);
 
+        return [
+            'updated' => $updated,
+            'oldStatus' => $old,
+            'status' => $new,
+            'allowedTransitions' => self::ALLOWED_STATUS_TRANSITIONS,
+            'message' => $this->allowedTransitionsMessage(),
+        ];
+
+    }
+
+    private function allowedTransitionsMessage(): string
+    {
+        $parts = [];
+        foreach (self::ALLOWED_STATUS_TRANSITIONS as $status => $nextStatuses) {
+            $parts[] = $status . ' => [' . implode(', ', $nextStatuses) . ']';
+        }
+
+        return 'Allowed transitions: ' . implode('; ', $parts);
     }
 
 

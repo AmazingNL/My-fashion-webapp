@@ -2,10 +2,11 @@
 
 namespace App\Services;
 
+use App\DTO\ProductRequestDto;
+use App\DTO\ProductVariantRequestDto;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Repositories\IProductRepository;
-use Exception;
 
 class ProductService implements IProductService
 {
@@ -28,36 +29,74 @@ class ProductService implements IProductService
         return $this->productRepository->getAllActive();
     }
 
+    public function getProductListData(array $query): array
+    {
+        $pageSize = max(1, (int) ($query['pageSize'] ?? 12));
+        $search = trim((string) ($query['search'] ?? ''));
+        $selectedCategory = $this->selectedCategory($query['category'] ?? '');
+        $minPrice = isset($query['minPrice']) && $query['minPrice'] !== '' ? (float) $query['minPrice'] : null;
+        $maxPrice = isset($query['maxPrice']) && $query['maxPrice'] !== '' ? (float) $query['maxPrice'] : null;
+
+        $products = $this->getActiveProducts();
+        $filterCategories = $this->extractFilterCategories($products);
+        $filteredProducts = $this->filterProducts($products, $search, $selectedCategory, $minPrice, $maxPrice);
+        $totalCount = count($filteredProducts);
+        $totalPages = max(1, (int) ceil($totalCount / $pageSize));
+        $page = min(max(1, (int) ($query['page'] ?? 1)), $totalPages);
+        $offset = ($page - 1) * $pageSize;
+        $pagedProducts = array_slice($filteredProducts, $offset, $pageSize);
+
+        return [
+            'products' => $pagedProducts,
+            'pagination' => [
+                'totalCount' => $totalCount,
+                'currentPage' => $page,
+                'pageSize' => $pageSize,
+                'totalPages' => $totalPages,
+            ],
+            'filters' => [
+                'filterCategories' => $filterCategories,
+                'currentFilters' => [
+                    'search' => $search,
+                    'category' => $selectedCategory,
+                    'minPrice' => $minPrice,
+                    'maxPrice' => $maxPrice,
+                    'pageSize' => $pageSize,
+                ],
+            ],
+        ];
+    }
+
+    public function getEmptyProductListData(): array
+    {
+        return [
+            'products' => [],
+            'pagination' => [
+                'totalCount' => 0,
+                'currentPage' => 1,
+                'pageSize' => 10,
+                'totalPages' => 1,
+            ],
+            'filters' => [
+                'filterCategories' => [],
+                'currentFilters' => [],
+            ],
+        ];
+    }
+
 
     public function toggleFavourite($productId): array
     {
-        $session = $_SESSION['favourites'] ??= [];
-        if (isset($session[$productId])) {
-            unset($session[$productId]);
-            $_SESSION['favourites'] = $session;
-            return ['productId' => $productId, 'favourited' => false];
-        }
-        $session[$productId] = true;
-        $_SESSION['favourites'] = $session;
-        return ['productId' => $productId, 'favourited' => true];
-    }
-
-    public function addToBasket($variantId, $quantity): array
-    {
-        if ($variantId <= 0)
-            return ['error' => 'Invalid variant ID'];
-
-        $basket = $_SESSION['basket'] ??= [];
-
-        if (isset($basket[$variantId])) {
-            $basket[$variantId] += $quantity;
-        } else {
-            $basket[$variantId] = $quantity;
+        $productId = (int) $productId;
+        if ($productId <= 0) {
+            return ['error' => 'Invalid product id.'];
         }
 
-        $_SESSION['basket'] = $basket;
+        if ($this->getProductById($productId) === null) {
+            return ['error' => 'Product not found.'];
+        }
 
-        return ['variantId' => $variantId, 'quantity' => $basket[$variantId]];
+        return ['error' => 'Favourites require persistent storage.'];
     }
 
     public function getProductById($id): ?Product
@@ -107,6 +146,91 @@ class ProductService implements IProductService
         Product admin 
        ========================= */
 
+    public function saveUploadedProductImage(array $file): array
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return [null, null];
+        }
+
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            return [null, 'File exceeds upload limit.'];
+        }
+
+        $maxBytes = 5 * 1024 * 1024;
+        if (($file['size'] ?? 0) > $maxBytes) {
+            return [null, 'Image must be 5MB or smaller.'];
+        }
+
+        $tmp = $file['tmp_name'] ?? '';
+        if ($tmp === '' || !is_uploaded_file($tmp)) {
+            return [null, 'Invalid uploaded file.'];
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $finfo->file($tmp);
+
+        $allowed = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+
+        if (!isset($allowed[$mime])) {
+            return [null, 'Only JPG, PNG, or WEBP images are allowed.'];
+        }
+
+        $dirFs = dirname(__DIR__, 2) . '/public/images/products';
+        if (!is_dir($dirFs) && !mkdir($dirFs, 0755, true)) {
+            return [null, 'Could not create image folder.'];
+        }
+
+        $name = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+        $destFs = $dirFs . '/' . $name;
+
+        if (!move_uploaded_file($tmp, $destFs)) {
+            return [null, 'Could not save uploaded image.'];
+        }
+
+        return ['/images/products/' . $name, null];
+    }
+
+    public function resolveProductImagePath($existing, array $file): ?string
+    {
+        [$newImagePath, $imageError] = $this->saveUploadedProductImage($file);
+        if ($imageError !== null) {
+            throw new \RuntimeException($imageError);
+        }
+
+        if ($newImagePath !== null) {
+            return $newImagePath;
+        }
+
+        if (is_array($existing)) {
+            return (string) ($existing['image'] ?? '');
+        }
+
+        if (is_object($existing) && method_exists($existing, 'getImage')) {
+            return (string) $existing->getImage();
+        }
+
+        return is_object($existing) ? (string) ($existing->image ?? '') : null;
+    }
+
+    public function validateProductRequest(ProductRequestDto $dto): array
+    {
+        if ($dto->productName === '' || $dto->category === '') {
+            return ['Product name and category are required.'];
+        }
+        if ($dto->price < 0) {
+            return ['Price cannot be negative.'];
+        }
+        if ($dto->stock < 0) {
+            return ['Stock cannot be negative.'];
+        }
+
+        return [];
+    }
+
     public function updateProduct(Product $product): array
     {
         try {
@@ -131,7 +255,6 @@ class ProductService implements IProductService
             if (!$product)
                 return ['error' => 'Product not found'];
 
-            // IMPORTANT: your repository delete() should deactivate by productId
             if (!$this->productRepository->delete((int) $id)) {
                 return ['error' => 'Product not found or already inactive'];
             }
@@ -176,8 +299,6 @@ class ProductService implements IProductService
         }
     }
 
-
-    // Wrapper so controllers can call updateVariant(id, size, colour, stock, price)
     public function updateVariantByFields(
         int $variantId,
         string $size,
@@ -249,6 +370,42 @@ class ProductService implements IProductService
         }
     }
 
+    public function applyVariantChanges(int $productId, array $variantRows): void
+    {
+        foreach ($variantRows as $row) {
+            if (!$row instanceof ProductVariantRequestDto) {
+                continue;
+            }
+
+            if ($this->shouldDeleteVariant($row)) {
+                $this->deleteVariant($row->variantId);
+                continue;
+            }
+
+            if ($this->isVariantRowSkippable($row) || $this->isVariantRowInvalid($row)) {
+                continue;
+            }
+
+            if ($row->variantId > 0) {
+                $this->updateVariantByFields(
+                    $row->variantId,
+                    $row->size,
+                    $row->colour,
+                    $row->stock,
+                    $row->price
+                );
+            } else {
+                $this->createVariantByFields(
+                    $productId,
+                    $row->size,
+                    $row->colour,
+                    $row->stock,
+                    $row->price
+                );
+            }
+        }
+    }
+
     private function validateProduct(Product $product): array
     {
         $errors = [];
@@ -261,6 +418,55 @@ class ProductService implements IProductService
             $errors[] = 'Stock cannot be negative.';
 
         return $errors;
+    }
+
+    private function selectedCategory($categoryInput): string
+    {
+        if (is_array($categoryInput)) {
+            return implode(',', array_values(array_filter(array_map(static fn($item): string => trim((string) $item), $categoryInput))));
+        }
+
+        return trim((string) $categoryInput);
+    }
+
+    private function filterProducts(array $products, string $search, string $category, ?float $minPrice, ?float $maxPrice): array
+    {
+        $selectedCategories = array_values(array_filter(array_map('trim', explode(',', strtolower($category)))));
+        return array_values(array_filter($products, function ($product) use ($search, $selectedCategories, $minPrice, $maxPrice): bool {
+            $name = strtolower((string) ($product['productName'] ?? ''));
+            $description = strtolower((string) ($product['description'] ?? ''));
+            $productCategory = strtolower((string) ($product['category'] ?? ''));
+            $price = (float) ($product['price'] ?? 0);
+            if ($search !== '') {
+                $field = strtolower($search);
+                if (!str_contains($name, $field) && !str_contains($description, $field) 
+                    && !str_contains($productCategory, $field) && !str_contains((string) $price, $field)) {
+                    return false;
+                }
+            }
+            if (!empty($selectedCategories) && !in_array($productCategory, $selectedCategories, true)) {
+                return false;
+            }
+            if ($minPrice !== null && $price < $minPrice) {
+                return false;
+            }
+            if ($maxPrice !== null && $price > $maxPrice) {
+                return false;
+            }
+            return true;
+        }));
+    }
+
+    private function extractFilterCategories(array $products): array
+    {
+        $categories = [];
+        foreach ($products as $product) {
+            $category = trim((string) ($product['category'] ?? ''));
+            if ($category !== '') {
+                $categories[$category] = $category;
+            }
+        }
+        return array_values($categories);
     }
 
     private function validateVariantsInput(array $variantsInput): array
@@ -319,21 +525,27 @@ class ProductService implements IProductService
         return $errors;
     }
 
-    private function extractSizesColors(array $variants): array
+    private function shouldDeleteVariant(ProductVariantRequestDto $row): bool
     {
-        $sizes = $colors = [];
+        return $row->variantId > 0 && $row->delete;
+    }
 
-        foreach ($variants as $v) {
-            $size = is_object($v) ? (string) ($v->size ?? '') : (string) ($v['size'] ?? '');
-            $colour = is_object($v) ? (string) ($v->colour ?? ($v->color ?? '')) : (string) ($v['colour'] ?? ($v['color'] ?? ''));
+    private function isVariantRowSkippable(ProductVariantRequestDto $row): bool
+    {
+        return $row->size === '' && $row->colour === '' && $row->variantId === 0;
+    }
 
-            if ($size !== '')
-                $sizes[$size] = true;
-            if ($colour !== '')
-                $colors[$colour] = true;
+    private function isVariantRowInvalid(ProductVariantRequestDto $row): bool
+    {
+        if ($row->size === '' || $row->colour === '') {
+            return true;
         }
 
-        return [array_keys($sizes), array_keys($colors)];
+        if ($row->stock < 0) {
+            return true;
+        }
+
+        return $row->price < 0;
     }
 
 }

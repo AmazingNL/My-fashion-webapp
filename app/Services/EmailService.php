@@ -1,7 +1,5 @@
 <?php
 
-/****** No much time to integrate email service****/
-
 declare(strict_types=1);
 
 namespace App\Services;
@@ -26,16 +24,13 @@ class EmailService
     public function sendWelcomeEmail(string $to, string $firstName): bool
     {
         $subject = "Welcome to Afro Fashion!";
+        $styles = $this->emailStyles();
 
         $message = "
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
-                .content { background-color: #f4f4f4; padding: 20px; }
-                .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+                {$styles}
             </style>
         </head>
         <body>
@@ -73,6 +68,12 @@ class EmailService
     public function sendOrderConfirmation(string $to, string $firstName, int $orderId, float $total, array $items): bool
     {
         $subject = "Order Confirmation - Order #{$orderId}";
+        $styles = $this->emailStyles('
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #8B4789; color: white; }
+            .total { font-size: 18px; font-weight: bold; text-align: right; }
+        ');
 
         $itemsHtml = '';
         foreach ($items as $item) {
@@ -88,15 +89,7 @@ class EmailService
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
-                .content { background-color: #f4f4f4; padding: 20px; }
-                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background-color: #8B4789; color: white; }
-                .total { font-size: 18px; font-weight: bold; text-align: right; }
-                .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+                {$styles}
             </style>
         </head>
         <body>
@@ -145,20 +138,18 @@ class EmailService
      */
     public function sendPasswordResetEmail(string $to, string $firstName, string $token, string $code): bool
     {
-        $resetLink = "http://localhost/reset-password?token={$token}";
+        $resetEndpoint = "POST /auth/password-reset/verify";
         $subject = "Password Reset Code";
+        $styles = $this->emailStyles('
+            .code { font-size: 22px; font-weight: bold; letter-spacing: 4px; text-align:center; padding: 10px; background:#fff; border-radius:8px; }
+            .token { word-break: break-all; padding: 10px; background:#fff; border-radius:8px; }
+        ');
 
         $message = "
     <html>
     <head>
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
-            .content { background-color: #f4f4f4; padding: 20px; }
-            .code { font-size: 22px; font-weight: bold; letter-spacing: 4px; text-align:center; padding: 10px; background:#fff; border-radius:8px; }
-            .button { display: inline-block; padding: 10px 20px; background-color: #8B4789; color: white; text-decoration: none; border-radius: 5px; }
-            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+            {$styles}
         </style>
     </head>
     <body>
@@ -169,12 +160,9 @@ class EmailService
                 <p>Use the code below to confirm your password reset:</p>
                 <div class='code'>{$code}</div>
 
-                <p style='text-align: center; margin: 25px 0;'>
-                    <a href='{$resetLink}' class='button'>Enter Code</a>
-                </p>
-
-                <p>Or copy this link:</p>
-                <p>{$resetLink}</p>
+                <p>Reset token:</p>
+                <p class='token'>{$token}</p>
+                <p>Send the token, code, newPassword, and confirmPassword fields to {$resetEndpoint}.</p>
                 <p>This code expires in 15 minutes.</p>
                 <p>If you didn't request this, ignore this email.</p>
             </div>
@@ -195,17 +183,15 @@ class EmailService
     public function sendAppointmentConfirmation(string $to, string $firstName, string $date, string $time, string $designType): bool
     {
         $subject = "Appointment Confirmation";
+        $styles = $this->emailStyles('
+            .details { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #8B4789; }
+        ');
 
         $message = "
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
-                .content { background-color: #f4f4f4; padding: 20px; }
-                .details { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #8B4789; }
-                .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+                {$styles}
             </style>
         </head>
         <body>
@@ -240,16 +226,13 @@ class EmailService
     public function sendPasswordChangedEmail(string $to, string $firstName): bool
     {
         $subject = "Password Changed Successfully";
+        $styles = $this->emailStyles();
 
         $message = "
     <html>
     <head>
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
-            .content { background-color: #f4f4f4; padding: 20px; }
-            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+            {$styles}
         </style>
     </head>
     <body>
@@ -289,6 +272,18 @@ class EmailService
         file_put_contents($filename, $content);
 
         return true; // Return true for demonstration
+    }
+
+    private function emailStyles(string $extra = ''): string
+    {
+        return "
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #8B4789; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f4f4f4; padding: 20px; }
+            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+            {$extra}
+        ";
     }
 
 

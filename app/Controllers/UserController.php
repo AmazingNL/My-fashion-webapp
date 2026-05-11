@@ -2,8 +2,9 @@
 
 namespace App\Controllers;
 
-use App\models\User;
-use App\services\IUserService;
+use App\Mappers\RegistrationRequestMapper;
+use App\Mappers\ResponseUserMapper;
+use App\Services\IUserService;
 use App\Core\ControllerBase;
 
 class UserController extends ControllerBase
@@ -15,13 +16,27 @@ class UserController extends ControllerBase
         $this->userService = $userService;
     }
 
-    public function showRegistrationForm(): void
+    public function viewUsers(): void
     {
-        $this->render(
-            'Users/showRegistrationForm',
-            ['title' => 'Register'],
-            'main'
-        );
+        try {
+            $this->jsonResponse($this->success([
+                'users' => ResponseUserMapper::responseUserMappers($this->userService->getAllUsers()),
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load users.'), 500);
+        }
+    }
+
+    public function aboutUs(): void
+    {
+        try {
+            $this->jsonResponse($this->success([
+                'name' => 'My Fashion Webapp',
+                'type' => 'fashion ecommerce API',
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load about endpoint.'), 500);
+        }
     }
 
     public function registerUser(): void
@@ -30,58 +45,26 @@ class UserController extends ControllerBase
             [$user, $password, $oldInput] = $this->registrationInput();
             $errors = $this->userService->createUser($user, $password);
             if (!empty($errors)) {
-                $this->render(
-                    'Users/ShowRegistrationForm',
-                    [
-                        'title' => 'Register',
-                        'errors' => $errors,
-                        'oldInput' => $oldInput,
-                    ],
-                    'main'
-                );
-                return;
+                $this->jsonResponse($this->error('Registration validation failed.', $errors, [
+                    'oldInput' => $oldInput,
+                ]), 422);
             }
-            $this->redirect('/productLists');
+            $this->jsonResponse($this->success([
+                'user' => ResponseUserMapper::responseUserMapper($user),
+            ], 'Registration successful.'), 201);
         } catch (\Throwable $e) {
-            $this->render(
-                'Users/ShowRegistrationForm',
-                [
-                    'title' => 'Register',
-                    'errors' => ['Registration failed. Please try again.'.$e],
-                    'oldInput' => [],
-                ],
-                'main'
-            );
+            $this->jsonResponse($this->error('Registration failed. Please try again.'), 500);
         }
     }
     // Private and Helper Functions //
     private function registrationInput(): array
     {
-        $firstName = trim((string) $this->input('firstName', ''));
-        $lastName = trim((string) $this->input('lastName', ''));
-        $email = trim((string) $this->input('email', ''));
-        $phone = trim((string) $this->input('phone', ''));
-        $password = (string) $this->input('password', '');
+        $dto = RegistrationRequestMapper::mapToRegistrationRequestDto($this->requestData());
 
         return [
-            new User(
-                null,
-                $firstName,
-                $lastName,
-                $email,
-                '',
-                $phone,
-                'customer',
-                null,
-                null
-            ),
-            $password,
-            [
-                'firstName' => $firstName,
-                'lastName' => $lastName,
-                'email' => $email,
-                'phone' => $phone,
-            ]
+            RegistrationRequestMapper::mapToUser($dto),
+            $dto->password,
+            RegistrationRequestMapper::mapToOldInput($dto)
         ];
     }
 

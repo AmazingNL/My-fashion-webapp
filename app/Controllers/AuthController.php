@@ -3,10 +3,13 @@
 namespace App\Controllers;
 
 use App\Core\ControllerBase;
+use App\Mappers\LoginMapper;
+use App\Mappers\PasswordResetRequestMapper;
+use App\Mappers\ResponseUserMapper;
 use App\Services\IUserService;
 use App\Services\EmailService;
 use App\Services\IPasswordResetService;
-use Exception;
+use Firebase\JWT\JWT;
 
 class AuthController extends ControllerBase
 {
@@ -17,156 +20,101 @@ class AuthController extends ControllerBase
     ) {
     }
 
-    public function showLogin()
-    {
-        $this->render('Auth/Login', ['title' => 'Login'], 'auth');
-    }
-
     public function login(): void
     {
-        $this->validateCsrf();
-        $email = trim((string) $this->input('email', ''));
-        $password = (string) $this->input('password', '');
         try {
-            if ($email === '' || $password === '') {
-                $this->redirect('/?error=' . urlencode('Email and password are required.') . '&email=' . urlencode($email));
-            }
-            $user = $this->userService->authenticateUser($email, $password);
+            $loginDto = LoginMapper::mapToLoginDto($this->requestData());
+            $user = $this->userService->authenticateUser($loginDto);
             if (!$user) {
-                $this->redirect('/?error=' . urlencode('Invalid email or password.') . '&email=' . urlencode($email));
+                $this->jsonResponse($this->error('Invalid email or password.'), 401);
+                return;
             }
-
-            $_SESSION['userId'] = $user->userId;
-            $_SESSION['role'] = $user->role;
-            $redirect = ($_SESSION['role'] === 'admin') ? '/admin/dashboard' : '/productLists';
-            $this->redirect($redirect);
-
+            // Prepare JWT payload
+            $payload = [
+                "iss" => "your-domain.com",
+                "iat" => time(),
+                "exp" => time() + 3600, // Token expires in 1 hour
+                "sub" => $user->userId,
+                "role" => $user->role
+            ];
+            $jwt = JWT::encode($payload, $this->jwtCode(), 'HS256');
+            $userDto = ResponseUserMapper::responseUserMapper($user);
+            $this->jsonResponse($this->success([
+                'token' => $jwt,
+                'user' => $userDto,
+            ], 'Logged in successfully.'));
         } catch (\Throwable $e) {
-            $this->redirect('/?error=' . urlencode('An unexpected error occurred. Please try again later.') . '&email=' . urlencode($email));
+            $this->jsonResponse($this->error('An unexpected error occurred. Please try again later.'), 500);
         }
     }
 
     public function logout(): void
     {
         try {
-            $this->ensureSession();
-            $_SESSION = [];
-            session_destroy();
-            $this->redirect('/');
-        }
-        catch(Exception $e){
-            $this->jsonResponse(['error' => 'An unexpected error occurred. Please try again later.'], 500);
+            $this->jsonResponse($this->success(null, 'Logged out successfully.'));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('An unexpected error occurred. Please try again later.'), 500);
         }
 
     }
 
-    // ==========================
-    // FORGOT PASSWORD FLOW
-    // ==========================
-
-    public function showForgotPassword(): void
-    {
-        $this->render('Auth/ForgotPassword', [
-            'title' => 'Forgot Password'
-        ], 'auth');
-    }
-
-    // user submits email + new password 
     public function requestReset(): void
     {
         try {
-            $this->validateCsrf();
-            $this->ensureSession();
-
-            [$email, $newPassword, $confirm] = $this->readResetRequestInput();
-            $errors = $this->validateResetRequestInput($email, $newPassword, $confirm);
+            $dto = PasswordResetRequestMapper::mapToPasswordResetRequestDto($this->requestData());
+            $errors = $this->userService->validateResetEmail($dto->email);
 
             if ($errors) {
-                $this->redirect($this->forgotPasswordUrl([
-                    'error' => implode(' ', array_values($errors)),
-                    'email' => $email,
-                ]));
+                $this->jsonResponse($this->error('Password reset validation failed.', $errors, [
+                    'email' => $dto->email,
+                ]), 422);
             }
 
-            $user = $this->userService->getUserByEmail($email);
+            $user = $this->userService->getUserByEmail($dto->email);
             if (!$user) {
-                $this->redirect($this->forgotPasswordUrl([
-                    'success' => 'If that email exists, we sent a code.',
-                ]));
+                $this->jsonResponse($this->success(null, 'If that email exists, we sent a code.'));
             }
 
             $reset = $this->passwordResetService->createReset((int) $user->userId);
 
-            $_SESSION['pendingPasswordReset'] = [
-                'token' => $reset['token'],
-                'newPassword' => $newPassword,
-                'userId' => (int) $user->userId,
-            ];
-
             $this->sendPasswordResetEmail($user, $reset);
 
-            $this->redirect($this->resetPasswordUrl((string) $reset['token'], [
-                'success' => 'Verification code sent. Check your email.',
-            ]));
+            $this->jsonResponse($this->success([
+                'token' => (string) $reset['token'],
+            ], 'Verification code sent. Check your email.'));
         } catch (\Throwable $e) {
-            $this->redirect($this->forgotPasswordUrl([
-                'error' => 'Something went wrong. Please try again.',
-            ]));
+            $this->jsonResponse($this->error('Something went wrong. Please try again.'), 500);
         }
     }
 
-    // Step 2 page: enter the code
-    public function showResetCode(): void
-    {
-        $token = (string) $this->input('token', '');
-        $this->render('Auth/ResetCode', [
-            'title' => 'Verify Reset Code',
-            'token' => $token
-        ], 'auth');
-    }
-
-    // Step 3: verify code -> then change password -> send confirmation -> redirect to /products
     public function verifyResetCode(): void
     {
         try {
-            $this->validateCsrf();
-            $this->ensureSession();
+            $dto = PasswordResetRequestMapper::mapToPasswordResetVerifyDto($this->requestData());
 
-            $token = (string) $this->input('token', '');
-            $code = trim((string) $this->input('code', ''));
-
-            if ($token === '' || $code === '') {
-                $this->redirect($this->resetPasswordUrl($token, [
-                    'error' => 'Token and code are required.',
-                ]));
+            if ($dto->token === '' || $dto->code === '') {
+                $this->jsonResponse($this->error('Token and code are required.'), 422);
             }
 
-            $row = $this->passwordResetService->validate($token, $code);
+            $errors = $this->userService->validateNewPassword($dto->newPassword, $dto->confirmPassword);
+            if ($errors) {
+                $this->jsonResponse($this->error('Password reset validation failed.', $errors), 422);
+            }
+
+            $row = $this->passwordResetService->validate($dto->token, $dto->code);
             if (!$row) {
-                $this->redirect($this->resetPasswordUrl($token, [
-                    'error' => 'Invalid or expired code/link.',
-                ]));
-            }
-
-            $pending = $_SESSION['pendingPasswordReset'] ?? null;
-            if (!$pending || ($pending['token'] ?? '') !== $token) {
-                $this->redirect($this->forgotPasswordUrl([
-                    'error' => 'Session expired. Please start again.',
-                ]));
+                $this->jsonResponse($this->error('Invalid or expired code/link.'), 422);
             }
 
             $userId = (int) $row['userId'];
             $user = $this->userService->getUserById($userId);
 
-            $ok = $this->userService->changeUserPassword($userId, (string) $pending['newPassword']);
+            $ok = $this->userService->changeUserPassword($userId, $dto->newPassword);
             if (!$ok) {
-                $this->redirect($this->resetPasswordUrl($token, [
-                    'error' => 'Failed to update password.',
-                ]));
+                $this->jsonResponse($this->error('Failed to update password.'), 500);
             }
 
             $this->passwordResetService->markUsed((int) $row['tokenId']);
-            unset($_SESSION['pendingPasswordReset']);
 
             if ($user) {
                 $this->emailService->sendPasswordChangedEmail(
@@ -175,47 +123,10 @@ class AuthController extends ControllerBase
                 );
             }
 
-            $this->redirect('/?success=' . urlencode('Password updated successfully. Please log in.'));
+            $this->jsonResponse($this->success(null, 'Password updated successfully. Please log in.'));
         } catch (\Throwable $e) {
-            $this->redirect($this->forgotPasswordUrl([
-                'error' => 'Something went wrong. Please try again.',
-            ]));
+            $this->jsonResponse($this->error('Something went wrong. Please try again.'), 500);
         }
-    }
-
-    private function readResetRequestInput(): array
-    {
-        return [
-            strtolower(trim((string) $this->input('email', ''))),
-            (string) $this->input('newPassword', ''),
-            (string) $this->input('confirmPassword', ''),
-        ];
-    }
-
-    private function validateResetRequestInput(string $email, string $newPassword, string $confirm): array
-    {
-        $errors = [];
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Enter a valid email.';
-        }
-        if ($newPassword === '' || $confirm === '') {
-            $errors['password'] = 'Password fields are required.';
-        }
-        if ($newPassword !== $confirm) {
-            $errors['confirmPassword'] = 'Passwords do not match.';
-        }
-        if (strlen($newPassword) < 8) {
-            $errors['password'] = 'Password must be at least 8 characters.';
-        }
-        if (!preg_match('/[a-zA-Z]/', $newPassword)) {
-            $errors['password'] = 'Password must contain at least one letter.';
-        }
-        if (!preg_match('/\d/', $newPassword)) {
-            $errors['password'] = 'Password must contain at least one number.';
-        }
-
-        return $errors;
     }
 
     private function sendPasswordResetEmail(mixed $user, array $reset): void
@@ -228,14 +139,4 @@ class AuthController extends ControllerBase
         );
     }
 
-    private function forgotPasswordUrl(array $params = []): string
-    {
-        return '/forgotPassword' . ($params ? '?' . http_build_query($params) : '');
-    }
-
-    private function resetPasswordUrl(string $token, array $params = []): string
-    {
-        $query = array_merge(['token' => $token], $params);
-        return '/reset-password?' . http_build_query($query);
-    }
 }

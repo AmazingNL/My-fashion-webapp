@@ -4,6 +4,10 @@ namespace App\Controllers;
 
 use App\Core\ControllerBase;
 use App\Core\Middleware;
+use App\Mappers\AppointmentMapper;
+use App\Mappers\AppointmentRequestMapper;
+use App\Mappers\AppointmentSlotMapper;
+use App\Mappers\AppointmentSlotRequestMapper;
 use App\Models\AppointmentStatus;
 use App\Services\IAppointmentService;
 
@@ -19,183 +23,164 @@ final class AppointmentController extends ControllerBase
 
     public function index(): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
+        try {
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
 
-        $userId = (int) ($this->currentUserId() ?? 0);
-        if ($userId <= 0) {
-            $this->redirect('/?error=login_required');
-            return;
+            $userId = (int) ($this->currentUserId() ?? 0);
+            if ($userId <= 0) {
+                $this->jsonResponse($this->error('Authentication is required.'), 401);
+            }
+
+            $appointments = $this->service->getUserAppointments($userId);
+
+            $this->jsonResponse($this->success([
+                'appointments' => AppointmentMapper::mapToAppointmentDtos($appointments),
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load appointments.', ['detail' => $e->getMessage()]), 500);
         }
-
-            [$success, $error] = $this->consumeFlash('appointment');
-        $appointments = $this->service->getUserAppointments($userId);
-
-        $this->render('Appointment/Index', [
-            'title' => 'My Appointments',
-            'appointments' => $appointments,
-            'success' => $success,
-            'error' => $error,
-        ]);
     }
 
     public function bookForm(): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
+        try {
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
 
-        $selectedDate = trim((string) $this->input('date', ''));
-            [$success, $error] = $this->consumeFlash('appointment');
+            $selectedDate = trim((string) $this->input('date', ''));
 
-        $slots = [];
-        if ($selectedDate !== '') {
-            try {
+            $slots = [];
+            if ($selectedDate !== '') {
                 $slots = $this->service->getAvailableSlotsByDate($selectedDate);
-            } catch (\Throwable $e) {
-                $error = $e->getMessage();
             }
-        }
 
-        $this->render('Appointment/Book', [
-            'title' => 'Book Appointment',
-            'selectedDate' => $selectedDate,
-            'slots' => $slots,
-            'success' => $success,
-            'error' => $error,
-        ]);
+            $this->jsonResponse($this->success([
+                'selectedDate' => $selectedDate,
+                'slots' => AppointmentSlotMapper::mapToAppointmentSlotDtos($slots),
+                'error' => '',
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load appointment booking form.', ['detail' => $e->getMessage()]), 500);
+        }
     }
 
     public function book(): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
-        $this->validateCsrf();
-
-        $userId = (int) $this->currentUserId();
-
-        $slotIdRaw = $this->input('slotId');
-        $slotId = (int) $slotIdRaw;
-
-        if ($slotId < 1) {
-            $this->setFlash('appointment', 'Please select a valid time slot.', 'error');
-            $this->redirect('/appointments/book');
-            return;
-        }
-
-        $designType = trim((string) $this->input('designType', '')) ?: null;
-        $notes = trim((string) $this->input('notes', '')) ?: null;
-
         try {
-            $id = $this->service->book($userId, $slotId, $designType, $notes);
-            $this->setFlash('appointment', 'Appointment booked successfully.', 'success');
-            $this->redirect('/appointments');
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
+
+            $userId = (int) $this->currentUserId();
+            $dto = AppointmentRequestMapper::mapToAppointmentRequestDto($this->requestData());
+            $slotId = $dto->slotId;
+
+            if ($slotId < 1) {
+                $this->jsonResponse($this->error('Please select a valid time slot.'), 422);
+            }
+
+            $id = $this->service->book($userId, $slotId, $dto->designType, $dto->notes);
+            $this->jsonResponse($this->success([
+                'appointmentId' => $id,
+            ], 'Appointment booked successfully.'), 201);
         } catch (\Throwable $e) {
-            $this->setFlash('appointment', $e->getMessage(), 'error');
-            $date = trim((string) $this->input('date', ''));
-            $this->redirect('/appointments/book' . ($date !== '' ? '?date=' . urlencode($date) : ''));
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
     public function editForm(int $id): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
+        try {
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
 
-        $userId = (int) ($this->currentUserId() ?? 0);
-        if ($userId <= 0) {
-            $this->redirect('/?error=login_required');
-            return;
-        }
-
-        $appointment = $this->findUserAppointment($userId, $id);
-        if ($appointment === null) {
-            $this->setFlash('appointment', 'Appointment not found.', 'error');
-            $this->redirect('/appointments');
-            return;
-        }
-
-        $selectedDate = trim((string) $this->input('date', ''));
-        if ($selectedDate === '') {
-            $selectedDate = (string) ($appointment['appointmentDate'] ?? '');
-        }
-
-        [$success, $error] = $this->consumeFlash('appointment');
-        $slots = [];
-        if ($selectedDate !== '') {
-            try {
-                $slots = $this->service->getAvailableSlotsByDate($selectedDate);
-            } catch (\Throwable $e) {
-                $error = $e->getMessage();
+            $userId = (int) ($this->currentUserId() ?? 0);
+            if ($userId <= 0) {
+                $this->jsonResponse($this->error('Authentication is required.'), 401);
             }
-        }
 
-        $this->render('Appointment/Edit', [
-            'title' => 'Update Appointment',
-            'appointmentId' => $id,
-            'appointment' => $appointment,
-            'selectedDate' => $selectedDate,
-            'slots' => $slots,
-            'success' => $success,
-            'error' => $error,
-        ]);
+            $appointment = $this->findUserAppointment($userId, $id);
+            if ($appointment === null) {
+                $this->jsonResponse($this->error('Appointment not found.'), 404);
+            }
+
+            $selectedDate = trim((string) $this->input('date', ''));
+            if ($selectedDate === '') {
+                $selectedDate = (string) ($appointment['appointmentDate'] ?? '');
+            }
+
+            $slots = [];
+            if ($selectedDate !== '') {
+                $slots = $this->service->getAvailableSlotsByDate($selectedDate);
+            }
+
+            $this->jsonResponse($this->success([
+                'appointmentId' => $id,
+                'appointment' => AppointmentMapper::mapToAppointmentDto($appointment),
+                'selectedDate' => $selectedDate,
+                'slots' => AppointmentSlotMapper::mapToAppointmentSlotDtos($slots),
+                'error' => '',
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load appointment edit form.', ['detail' => $e->getMessage()]), 500);
+        }
     }
 
 
     public function updateSlot(int $id): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
-        $this->validateCsrf();
-
-        $userId = (int) $this->currentUserId();
-        $newSlotId = (int) $this->input('slotId');
-
         try {
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
+
+            $userId = (int) $this->currentUserId();
+            $dto = AppointmentRequestMapper::mapToAppointmentRequestDto($this->requestData());
+            $newSlotId = $dto->slotId;
+
             $this->service->updateAppointmentSlot($userId, $id, $newSlotId);
-            $this->setFlash('appointment', 'Appointment updated successfully.', 'success');
-            $this->redirect('/appointments');
+            $this->jsonResponse($this->success([
+                'appointmentId' => $id,
+                'slotId' => $newSlotId,
+            ], 'Appointment updated successfully.'));
         } catch (\Throwable $e) {
-            $this->setFlash('appointment', $e->getMessage(), 'error');
-            $date = trim((string) $this->input('date', ''));
-            $this->redirect('/appointments/' . $id . '/edit' . ($date !== '' ? '?date=' . urlencode($date) : ''));
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
     public function updateDetails(int $id): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
-        $this->validateCsrf();
-
-        $userId = (int) $this->currentUserId();
-        $designType = trim((string) $this->input('designType', '')) ?: null;
-        $notes = trim((string) $this->input('notes', '')) ?: null;
-
         try {
-            $this->service->updateAppointmentDetails($userId, $id, $designType, $notes);
-            $this->setFlash('appointment', 'Details saved.', 'success');
-            $this->redirect('/appointments');
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
+
+            $userId = (int) $this->currentUserId();
+            $dto = AppointmentRequestMapper::mapToAppointmentRequestDto($this->requestData());
+
+            $this->service->updateAppointmentDetails($userId, $id, $dto->designType, $dto->notes);
+            $this->jsonResponse($this->success([
+                'appointmentId' => $id,
+                'designType' => $dto->designType,
+                'notes' => $dto->notes,
+            ], 'Details saved.'));
         } catch (\Throwable $e) {
-            $this->setFlash('appointment', $e->getMessage(), 'error');
-            $this->redirect('/appointments/' . $id . '/edit');
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
     public function cancel(int $id): void
     {
-        Middleware::requireAuth();
-        Middleware::requireCustomer();
-        $this->validateCsrf();
-
-        $userId = (int) $this->currentUserId();
-
         try {
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
+
+            $userId = (int) $this->currentUserId();
+
             $this->service->cancel($userId, $id);
-            $this->setFlash('appointment', 'Appointment cancelled.', 'success');
-            $this->redirect('/appointments');
+            $this->jsonResponse($this->success([
+                'appointmentId' => $id,
+            ], 'Appointment cancelled.'));
         } catch (\Throwable $e) {
-            $this->setFlash('appointment', $e->getMessage(), 'error');
-            $this->redirect('/appointments');
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
@@ -205,65 +190,61 @@ final class AppointmentController extends ControllerBase
 
     public function adminIndex(): void
     {
-        Middleware::requireAdmin();
-        $appointments = $this->service->adminGetAllAppointments();
-        [$success, $error] = $this->consumeFlash('admin');
+        try {
+            Middleware::requireAdmin();
+            $appointments = $this->service->adminGetAllAppointments();
 
-        $this->render('Admin/Appointment/Index', [
-            'title' => 'Appointments',
-            'appointments' => $appointments,
-            'success' => $success,
-            'error' => $error,
-        ], 'admin');
+            $this->jsonResponse($this->success([
+                'appointments' => AppointmentMapper::mapToAppointmentDtos($appointments),
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load admin appointments.', ['detail' => $e->getMessage()]), 500);
+        }
     }
 
     public function adminAddSlot(): void
     {
-        Middleware::requireAdmin();
-        $this->validateCsrf();
-
-        $date = (string) $this->input('appointmentDate');
-        $start = (string) $this->input('startTime');
-        $end = (string) $this->input('endTime');
-        $bulkMonth = (string) $this->input('bulkMonth', '') === '1';
-        $secondStart = (string) $this->input('secondStartTime', '');
-        $secondEnd = (string) $this->input('secondEndTime', '');
-
         try {
-            if ($bulkMonth) {
-                $created = $this->service->adminAddMonthlySlots($date, $start, $end, $secondStart, $secondEnd, 30);
-                $this->setFlash('admin', 'Monthly slots created: ' . $created, 'success');
+            Middleware::requireAdmin();
+
+            $dto = AppointmentSlotRequestMapper::mapToAppointmentSlotRequestDto($this->requestData());
+
+            if ($dto->bulkMonth) {
+                $created = $this->service->adminAddMonthlySlots($dto->appointmentDate, $dto->startTime, $dto->endTime, $dto->secondStartTime, $dto->secondEndTime, 30);
+                $this->jsonResponse($this->success([
+                    'created' => $created,
+                ], 'Monthly slots created: ' . $created), 201);
             } else {
-                $this->service->adminAddSlot($date, $start, $end);
-                $this->setFlash('admin', 'Slot added successfully.', 'success');
+                $this->service->adminAddSlot($dto->appointmentDate, $dto->startTime, $dto->endTime);
+                $this->jsonResponse($this->success([
+                    'appointmentDate' => $dto->appointmentDate,
+                    'startTime' => $dto->startTime,
+                    'endTime' => $dto->endTime,
+                ], 'Slot added successfully.'), 201);
             }
-            $this->redirect('/admin/appointments');
         } catch (\Throwable $e) {
-            $this->setFlash('admin', $e->getMessage(), 'error');
-            $this->redirect('/admin/appointments');
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
     public function adminSetStatus(int $id): void
     {
-        Middleware::requireAdmin();
-        $this->validateCsrf();
-
         try {
-            $status = AppointmentStatus::from((string) $this->input('status'));
-            $this->service->adminSetStatus($id, $status);
-        } catch (\ValueError $e) {
-            $this->setFlash('admin', 'Invalid appointment status.', 'error');
-            $this->redirect('/admin/appointments');
-            return;
-        } catch (\Throwable $e) {
-            $this->setFlash('admin', $e->getMessage(), 'error');
-            $this->redirect('/admin/appointments');
-            return;
-        }
+            Middleware::requireAdmin();
 
-        $this->setFlash('admin', 'Status updated.', 'success');
-        $this->redirect('/admin/appointments');
+            $dto = AppointmentRequestMapper::mapToAppointmentRequestDto($this->requestData());
+            $status = AppointmentStatus::from($dto->status);
+            $this->service->adminSetStatus($id, $status);
+
+            $this->jsonResponse($this->success([
+                'appointmentId' => $id,
+                'status' => $status->value,
+            ], 'Status updated.'));
+        } catch (\ValueError $e) {
+            $this->jsonResponse($this->error('Invalid appointment status.'), 422);
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 500);
+        }
     }
 
     private function findUserAppointment(int $userId, int $appointmentId): ?array

@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\ControllerBase;
+use App\Core\Middleware;
+use App\DTO\CartItemRequestDto;
+use App\Mappers\CartMapper;
 use App\Services\ICartService;
-use App\ViewModel\CartVM;
-use Exception;
 
 class CartController extends ControllerBase
 {
@@ -20,120 +21,105 @@ class CartController extends ControllerBase
 
     public function viewCart(): void
     {
-        [$success, $error] = $this->consumeFlash('cart');
+        try {
+            $this->requireCartUser();
 
-        $cartVm = new CartVM(
-            'Shopping Cart',
-            $this->cartService->getCartItems(),
-            $this->cartService->getTotalPrice(),
-            $this->cartService->getItemCount(),
-            $this->cartService->isEmpty(),
-            $success !== '' ? $success : $error,
-            $success !== '' ? 'success' : 'error'
-        );
-
-        $this->render('Cart/ViewCart', [
-            'cartVm' => $cartVm,
-        ]);
+            $this->jsonResponse($this->success([
+                'cart' => $this->cartSummary(),
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 422);
+        }
     }
 
-    public function addToBasket(): void
+    public function addToCart(): void
     {
-        $this->validateCsrf();
-
         try {
-            [$productId, $variantId, $quantity] = $this->readCartInputs();
-            $this->checkValidIds($productId, $variantId);
-            if ($quantity <= 0) {
-                throw new Exception('Invalid input');
-            }
+            $this->requireCartUser();
+            $dto = $this->readCartInputs();
+            $this->cartService->validateCartItemRequest($dto);
 
-            $this->cartService->addItem($productId, $variantId, $quantity);
-            $this->setFlash('cart', 'Item added to your basket.', 'success');
-            $this->redirect('/viewCart');
-        } catch (Exception $e) {
-            $this->setFlash('cart', $e->getMessage(), 'error');
-            $this->redirect('/viewCart');
+            $this->cartService->addItem($dto->productId, $dto->variantId, $dto->quantity);
+            $this->jsonResponse($this->success($this->cartSummary(), 'Item added to your cart.'), 201);
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
     public function updateQuantity(): void
     {
-        $this->validateCsrf();
         try {
-            [$productId, $variantId, $quantity] = $this->readCartInputs();
-            $this->checkValidIds($productId, $variantId);
-            if ($quantity <= 0) {
-                $this->cartService->removeItem($productId, $variantId);
-                $this->setFlash('cart', 'Item removed from your basket.', 'success');
-                $this->redirect('/viewCart');
-                return;
+            $this->requireCartUser();
+            $dto = $this->readCartInputs();
+            $this->cartService->validateCartItemIds($dto->productId, $dto->variantId);
+            if ($dto->quantity <= 0) {
+                $this->cartService->removeItem($dto->productId, $dto->variantId);
+                $this->jsonResponse($this->success($this->cartSummary(), 'Item removed from your cart.'));
             }
-            $result = $this->cartService->updateQuantity($productId, $variantId, $quantity);
+            $result = $this->cartService->updateQuantity($dto->productId, $dto->variantId, $dto->quantity);
             if (!$result) {
-                $this->setFlash('cart', 'Item not found in cart', 'error');
-                $this->redirect('/viewCart');
-                return;
+                $this->jsonResponse($this->error('Item not found in cart.'), 404);
             }
 
-            $this->setFlash('cart', 'Cart updated.', 'success');
-            $this->redirect('/viewCart');
-        } catch (Exception $e) {
-            $this->setFlash('cart', $e->getMessage(), 'error');
-            $this->redirect('/viewCart');
+            $this->jsonResponse($this->success($this->cartSummary(), 'Cart updated.'));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
-    public function removeFromBasket(): void
+    public function removeFromCart(): void
     {
-        $this->validateCsrf();
-
         try {
-            [$productId, $variantId] = $this->readCartInputs();
-            $this->checkValidIds($productId, $variantId);
+            $this->requireCartUser();
+            $dto = $this->readCartInputs();
+            $this->cartService->validateCartItemIds($dto->productId, $dto->variantId);
 
-            $result = $this->cartService->removeItem($productId, $variantId);
+            $result = $this->cartService->removeItem($dto->productId, $dto->variantId);
             if (!$result) {
-                $this->setFlash('cart', 'Item not found in cart', 'error');
-                $this->redirect('/viewCart');
-                return;
+                $this->jsonResponse($this->error('Item not found in cart.'), 404);
             }
-            $this->setFlash('cart', 'Item removed from your basket.', 'success');
-            $this->redirect('/viewCart');
-        } catch (Exception $e) {
-            $this->setFlash('cart', $e->getMessage(), 'error');
-            $this->redirect('/viewCart');
+            $this->jsonResponse($this->success($this->cartSummary(), 'Item removed from your cart.'));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
-    public function clearBasket(): void
+    public function clearCart(): void
     {
-        $this->validateCsrf();
-
         try {
+            $this->requireCartUser();
             $this->cartService->clearCart();
-            $this->setFlash('cart', 'Cart cleared.', 'success');
-            $this->redirect('/viewCart');
-        } catch (Exception $e) {
-            $this->setFlash('cart', $e->getMessage(), 'error');
-            $this->redirect('/viewCart');
+            $this->jsonResponse($this->success($this->cartSummary(), 'Cart cleared.'));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 422);
         }
     }
 
-    private function readCartInputs(): array
+    private function cartSummary(): array
     {
-        return [
-            (int) $this->input('productId', 0),
-            (int) $this->input('variantId', 0),
-            (int) $this->input('quantity', 1),
-        ];
+        return CartMapper::mapToCartSummaryDto(
+            $this->cartService->getCartItems(),
+            $this->cartService->getTotalPrice(),
+            $this->cartService->getItemCount(),
+            $this->cartService->isEmpty()
+        )->jsonSerialize();
     }
 
-    private function checkValidIds(int $productId, int $variantId): void
+    private function readCartInputs(): CartItemRequestDto
     {
-        if ($productId <= 0 || $variantId <= 0) {
-            throw new Exception('Invalid input');
+        return CartMapper::mapToCartItemRequestDto($this->requestData());
+    }
+
+    private function requireCartUser(): void
+    {
+        Middleware::requireCustomer();
+
+        $userId = (int) ($this->currentUserId() ?? 0);
+        if ($userId <= 0) {
+            $this->jsonResponse($this->error('Authentication is required.'), 401);
         }
+
+        $this->cartService->setUserId($userId);
     }
 
 }

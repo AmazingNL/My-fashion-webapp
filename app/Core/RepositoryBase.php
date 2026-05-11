@@ -18,11 +18,11 @@ class RepositoryBase
             $config = new Config();
 
             self::$sharedConnection = new PDO(
-                'mysql:host=' . $config::DB_SERVER_NAME .
-                ';dbname=' . $config::DB_NAME .
+                'mysql:host=' . $config::dbServerName() .
+                ';dbname=' . $config::dbName() .
                 ';charset=utf8mb4',
-                $config::DB_USERNAME,
-                $config::DB_PASSWORD
+                $config::dbUsername(),
+                $config::dbPassword()
             );
 
             self::$sharedConnection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

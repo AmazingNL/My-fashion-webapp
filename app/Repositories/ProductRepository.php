@@ -4,9 +4,11 @@ namespace App\Repositories;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Mappers\ProductModelMapper;
+use App\Mappers\ProductVariantMapper;
 use App\Repositories\IProductRepository;
 use App\Core\RepositoryBase;
-use Exception;
+use PDOException;
 use RuntimeException;
 
 class ProductRepository extends RepositoryBase implements IProductRepository
@@ -21,7 +23,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             $stmt->execute();
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
             return $rows;
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error " . $e);
         }
     }
@@ -30,22 +32,15 @@ class ProductRepository extends RepositoryBase implements IProductRepository
     public function getVariantsByProductId(int $id): array
     {
         try {
-            $sql = "SELECT * FROM product_variants WHERE productId = :pid ORDER BY size, colour";
+            $sql = "SELECT * FROM product_variants WHERE productId = :pid ORDER BY variantId DESC";
             $stmt = $this->getConnection()->prepare($sql);
             $stmt->execute([':pid' => $id]);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
-            return array_map(function (array $row): ProductVariant {
-                return new ProductVariant(
-                    (int) ($row['variantId'] ?? 0),
-                    (int) ($row['productId'] ?? 0),
-                    (string) ($row['size'] ?? ''),
-                    (string) ($row['colour'] ?? ''),
-                    (int) ($row['stockQuantity'] ?? 0)
-                );
-            }, $rows);
-        } catch (Exception $e) {
-            throw new RuntimeException("DB error" . $e);
+            return ProductVariantMapper::mapToProductVariants($rows);
+
+        } catch (PDOException $e) {
+            throw new RuntimeException("DB error " . $e->getMessage());
         }
 
     }
@@ -62,15 +57,9 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 return null;
             }
 
-            return new ProductVariant(
-                (int) ($row['variantId'] ?? 0),
-                (int) ($row['productId'] ?? 0),
-                (string) ($row['size'] ?? ''),
-                (string) ($row['colour'] ?? ''),
-                (int) ($row['stockQuantity'] ?? 0)
-            );
-        } catch (Exception $e) {
-            throw new RuntimeException("DB error" . $e);
+            return ProductVariantMapper::mapToProductVariant($row);
+        } catch (PDOException $e) {
+            throw new RuntimeException("DB error" . $e->getMessage());
         }
 
     }
@@ -87,50 +76,9 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             if (!$row) {
                 return null;
             }
+            return ProductModelMapper::mapToProduct($row);
 
-            return new Product(
-                (int) ($row['productId'] ?? 0),
-                (string) ($row['productName'] ?? ''),
-                (string) ($row['description'] ?? ''),
-                (float) ($row['price'] ?? 0),
-                (string) ($row['category'] ?? ''),
-                (int) ($row['stock'] ?? 0),
-                (string) ($row['image'] ?? ''),
-                $row['createdAt'] ?? null,
-                $row['updatedAt'] ?? null,
-                (bool) ($row['isActive'] ?? false)
-            );
-        } catch (Exception $e) {
-            throw new RuntimeException("DB error" . $e);
-        }
-
-    }
-
-    // For cart displays: include inactive products so customers can complete purchases
-    public function getProductByIdForCart(int $id): ?Product
-    {
-        try {
-            $sql = "SELECT * FROM products WHERE productId = :id";
-            $stmt = $this->getConnection()->prepare($sql);
-            $stmt->execute([':id' => $id]);
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-            if (!$row) {
-                return null;
-            }
-
-            return new Product(
-                (int) ($row['productId'] ?? 0),
-                (string) ($row['productName'] ?? ''),
-                (string) ($row['description'] ?? ''),
-                (float) ($row['price'] ?? 0),
-                (string) ($row['category'] ?? ''),
-                (int) ($row['stock'] ?? 0),
-                (string) ($row['image'] ?? ''),
-                $row['createdAt'] ?? null,
-                $row['updatedAt'] ?? null,
-                (bool) ($row['isActive'] ?? false)
-            );
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }
 
@@ -168,7 +116,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             }
 
             return $this->mapJoinedProductDetails($rows);
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException('DB error ' . $e->getMessage());
         }
     }
@@ -193,7 +141,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 ':isActive' => $product->isActive
             ]);
             return (int) $this->getConnection()->lastInsertId();
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }
     }
@@ -214,7 +162,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 ':stockQuantity' => $variant->stockQuantity
             ]);
 
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }
 
@@ -245,7 +193,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 ':productId' => (int) $product->productId,
             ]);
             return $stmt->rowCount() > 0;
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }
 
@@ -258,11 +206,12 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             $stmt = $this->getConnection()->prepare($sql);
             $stmt->execute([':id' => (int) $id]);
             return $stmt->rowCount() > 0;
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }
 
     }
+
 
     public function updateVariant(ProductVariant $variant): bool
     {
@@ -281,7 +230,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 ':variantId' => (int) $variant->variantId,
             ]);
             return $stmt->rowCount() > 0;
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }
     }
@@ -293,11 +242,10 @@ class ProductRepository extends RepositoryBase implements IProductRepository
             $stmt = $this->getConnection()->prepare($sql);
             $stmt->execute([':variantId' => $variantId]);
             return $stmt->rowCount() > 0;
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             throw new RuntimeException("DB error " . $e);
         }
     }
-
 
     private function mapJoinedProductDetails(array $rows): array
     {

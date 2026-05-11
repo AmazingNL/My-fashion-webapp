@@ -23,7 +23,7 @@ interface IOrderService
     public function getItemsByOrderId(int $orderId): array;
     public function getOrderById(int $orderId): Order;
     public function cancelMyOrder(int $userId, int $orderId): bool;
-    public function adminUpdateStatus(int $orderId, OrderStatus $newStatus): bool;
+    public function adminUpdateStatus(int $orderId, OrderStatus $newStatus): array;
     public function getAllOrders(): array;
     public function countAllOrders(): int;
 

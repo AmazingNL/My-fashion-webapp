@@ -2,19 +2,46 @@
 
 namespace App\Services;
 
+use App\DTO\CartItemRequestDto;
+use App\Repositories\ICartRepository;
 use App\Repositories\IProductRepository;
 use Exception;
 
 class CartService implements ICartService
 {
-    private const CART_KEY = 'shopping_cart';
-
     private IProductRepository $productRepository;
+    private ICartRepository $cartRepository;
+    private ?int $userId = null;
 
-    public function __construct(IProductRepository $productRepository)
+    public function __construct(IProductRepository $productRepository, ICartRepository $cartRepository)
     {
         $this->productRepository = $productRepository;
-        $this->initializeCart();
+        $this->cartRepository = $cartRepository;
+    }
+
+    public function setUserId(int $userId): void
+    {
+        if ($userId <= 0) {
+            throw new Exception('Authentication is required.');
+        }
+
+        $this->userId = $userId;
+    }
+
+    public function validateCartItemRequest(CartItemRequestDto $dto): void
+    {
+        $this->validateCartItemIds($dto->productId, $dto->variantId);
+
+        if ($dto->quantity <= 0) {
+            throw new Exception('Invalid input');
+        }
+    }
+
+    public function validateCartItemIds(int $productId, int $variantId): void
+    {
+        if ($productId <= 0 || $variantId <= 0) {
+            throw new Exception('Invalid input');
+        }
     }
 
 
@@ -35,20 +62,10 @@ class CartService implements ICartService
             throw new Exception("Insufficient stock available; only {$availableToAdd} left");
         }
 
-        $key = $this->generateKey($productId, $variantId);
-        $cart = $this->sessionCart();
-        if (isset($cart[$key])) {
-            $cart[$key]['quantity'] += $quantity;
-        } else {
-            $cart[$key] = [
-                'productId' => $productId,
-                'variantId' => $variantId,
-                'quantity' => $quantity,
-                'addedAt' => time(),
-            ];
-        }
+        $existing = $this->cartRepository->findItem($this->requireUserId(), $productId, $variantId);
+        $newQuantity = (int) ($existing['quantity'] ?? 0) + $quantity;
 
-        $_SESSION[self::CART_KEY] = $cart;
+        $this->cartRepository->saveItem($this->requireUserId(), $productId, $variantId, $newQuantity);
     }
 
     public function updateQuantity(int $productId, int $variantId, int $quantity): bool
@@ -57,46 +74,35 @@ class CartService implements ICartService
             return $this->removeItem($productId, $variantId);
         }
 
-        $key = $this->generateKey($productId, $variantId);
-        $cart = $this->sessionCart();
-        if (!isset($cart[$key])) {
+        if ($this->cartRepository->findItem($this->requireUserId(), $productId, $variantId) === null) {
             return false;
         }
 
         $variant = $this->requireVariant($variantId);
-        $this->assertCanSetQuantity($key, $variant, $quantity);
-        $cart[$key]['quantity'] = $quantity;
-        $_SESSION[self::CART_KEY] = $cart;
+        $this->assertCanSetQuantity($productId, $variant, $quantity);
+        $this->cartRepository->saveItem($this->requireUserId(), $productId, $variantId, $quantity);
 
         return true;
     }
 
     public function removeItem(int $productId, int $variantId): bool
     {
-        $key = $this->generateKey($productId, $variantId);
-        $cart = $this->sessionCart();
-        if (!isset($cart[$key])) {
-            return false;
-        }
-
-        unset($cart[$key]);
-        $_SESSION[self::CART_KEY] = $cart;
-        return true;
+        return $this->cartRepository->removeItem($this->requireUserId(), $productId, $variantId);
     }
 
     public function getCartItems(): array
     {
         $items = [];
 
-        foreach ($this->sessionCart() as $item) {
+        foreach ($this->cartItems() as $item) {
             $productId = (int) ($item['productId'] ?? 0);
             $variantId = (int) ($item['variantId'] ?? 0);
             
             // Use cart-specific lookup that includes inactive products
-            $product = $this->productRepository->getProductByIdForCart($productId);
+            $product = $this->productRepository->getProductById($productId);
             $variant = $this->productRepository->getVariantById($variantId);
             
-            // Skip items with missing product or variant, but don't remove from session
+            // Skip items with missing product or variant.
             if (!$product || !$variant) {
                 error_log("Cart item skipped - Product ID: $productId (exists: " . ($product ? 'yes' : 'no') . "), Variant ID: $variantId (exists: " . ($variant ? 'yes' : 'no') . ")");
                 continue;
@@ -118,7 +124,7 @@ class CartService implements ICartService
                 'stockQuantity' => (int) $variant->stockQuantity,
                 'stockRemaining' => $this->getVirtualVariantStock($variantId),
                 'subtotal' => (float) $product->price * $qty,
-                'addedAt' => (int) ($item['addedAt'] ?? time()),
+                'addedAt' => strtotime((string) ($item['createdAt'] ?? 'now')) ?: time(),
             ];
         }
 
@@ -129,7 +135,7 @@ class CartService implements ICartService
     {
         $total = 0.0;
 
-        foreach ($this->sessionCart() as $item) {
+        foreach ($this->cartItems() as $item) {
             $total += $this->lineTotal($item);
         }
 
@@ -140,7 +146,7 @@ class CartService implements ICartService
     {
         $count = 0;
 
-        foreach ($this->sessionCart() as $item) {
+        foreach ($this->cartItems() as $item) {
             $count += (int) ($item['quantity'] ?? 0);
         }
 
@@ -149,30 +155,30 @@ class CartService implements ICartService
 
     public function clearCart(): void
     {
-        $_SESSION[self::CART_KEY] = [];
+        $this->cartRepository->clearByUserId($this->requireUserId());
     }
 
     public function isEmpty(): bool
     {
-        return empty($this->sessionCart());
+        return empty($this->cartItems());
     }
 
     // Re-check cart items against current products, variants, and stock before checkout.
     public function validateCart(): array
     {
         $errors = [];
-        $cart = $this->sessionCart();
+        $cart = $this->cartItems();
 
         foreach ($cart as $key => $item) {
             $product = $this->productRepository->getProductById((int) ($item['productId'] ?? 0));
             if (!$product) {
-                unset($cart[$key]);
+                $this->cartRepository->removeItem($this->requireUserId(), (int) ($item['productId'] ?? 0), (int) ($item['variantId'] ?? 0));
                 $errors[] = 'Product no longer available';
                 continue;
             }
             $variant = $this->productRepository->getVariantById((int) ($item['variantId'] ?? 0));
             if (!$variant) {
-                unset($cart[$key]);
+                $this->cartRepository->removeItem($this->requireUserId(), (int) ($item['productId'] ?? 0), (int) ($item['variantId'] ?? 0));
                 $errors[] = 'Product variant no longer available';
                 continue;
             }
@@ -181,7 +187,6 @@ class CartService implements ICartService
                 $errors[] = "{$product->productName} ({$variant->size}, {$variant->colour}) only has {$variant->stockQuantity} in stock";
             }
         }
-        $_SESSION[self::CART_KEY] = $cart;
         return $errors;
     }
 
@@ -193,7 +198,7 @@ class CartService implements ICartService
     {
         $reserved = 0;
 
-        foreach ($this->sessionCart() as $item) {
+        foreach ($this->cartItems() as $item) {
             if ((int) ($item['variantId'] ?? 0) === $variantId) {
                 $reserved += (int) ($item['quantity'] ?? 0);
             }
@@ -216,16 +221,18 @@ class CartService implements ICartService
      * Private helpers
      * ========================= */
 
-    private function sessionCart(): array
+    private function cartItems(): array
     {
-        return $_SESSION[self::CART_KEY] ?? [];
+        return $this->cartRepository->findByUserId($this->requireUserId());
     }
 
-    private function initializeCart(): void
+    private function requireUserId(): int
     {
-        if (!isset($_SESSION[self::CART_KEY]) || !is_array($_SESSION[self::CART_KEY])) {
-            $_SESSION[self::CART_KEY] = [];
+        if ($this->userId === null || $this->userId <= 0) {
+            throw new Exception('Authentication is required.');
         }
+
+        return $this->userId;
     }
 
     private function requireProduct(int $productId)
@@ -244,9 +251,10 @@ class CartService implements ICartService
         return $variant;
     }
 
-    private function assertCanSetQuantity(string $key, $variant, int $newQuantity): void
+    private function assertCanSetQuantity(int $productId, $variant, int $newQuantity): void
     {
-        $currentQty = (int) ($_SESSION[self::CART_KEY][$key]['quantity'] ?? 0);
+        $current = $this->cartRepository->findItem($this->requireUserId(), $productId, (int) $variant->variantId);
+        $currentQty = (int) ($current['quantity'] ?? 0);
         $reservedTotal = $this->getReservedVariantQuantity((int) $variant->variantId);
         $reservedExcludingThis = max(0, $reservedTotal - $currentQty);
 
@@ -266,8 +274,4 @@ class CartService implements ICartService
         return (float) $product->price * (int) ($item['quantity'] ?? 0);
     }
 
-    private function generateKey(int $productId, int $variantId): string
-    {
-        return "p{$productId}_v{$variantId}";
-    }
 }

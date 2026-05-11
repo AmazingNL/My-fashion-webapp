@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Repositories\IUserRepository;
+use App\DTO\LoginDto;
 use DateTime;
-use Exception;
 
 class UserService implements IUserService
 {
@@ -68,9 +68,9 @@ class UserService implements IUserService
         return $errors;
     }
 
-    public function authenticateUser(string $email, string $password): ?User
+    public function authenticateUser(LoginDto $loginDto): ?User
     {
-        $email = $this->normalizeEmail($email);
+        $email = $this->normalizeEmail($loginDto->email);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;
         }
@@ -78,10 +78,36 @@ class UserService implements IUserService
         if (!$user) {
             return null;
         }
-        if (!password_verify($password, $user->password)) {
+        if (!password_verify($loginDto->password, $user->password)) {
             return null;
         }
         return $user;
+    }
+
+    public function validateResetEmail(string $email): array
+    {
+        $errors = [];
+        $email = $this->normalizeEmail($email);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Enter a valid email.';
+        }
+
+        return $errors;
+    }
+
+    public function validateNewPassword(string $newPassword, string $confirm): array
+    {
+        $errors = $this->validatePassword($newPassword);
+
+        if ($newPassword === '' || $confirm === '') {
+            $errors['password'] = 'Password fields are required.';
+        }
+        if ($newPassword !== $confirm) {
+            $errors['confirmPassword'] = 'Passwords do not match.';
+        }
+
+        return $errors;
     }
 
 

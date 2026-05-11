@@ -1,5 +1,7 @@
 # My Fashion Web App
 
+Decoupled PHP API backend for the My Fashion application. This version keeps the business logic, persistence, authentication, and admin/customer workflows in PHP, while the UI is expected to be handled by a separate Vue frontend.
+
 ## 1. How To Run
 
 ### Requirements
@@ -80,11 +82,11 @@ UNION ALL SELECT 'orders', COUNT(*) FROM orders;
 
 ## 4. Architecture, Patterns, And File References
 
-This is a custom PHP MVC project using Controller -> Service -> Repository layering.
+This is a custom PHP API project using Controller -> Service -> Repository layering.
 
-### Core MVC flow
+### Core API flow
 - Routing and dispatch: `app/Core/Router.php`
-- Base controller helpers/session/flash: `app/Core/ControllerBase.php`
+- Base controller JSON helpers: `app/Core/ControllerBase.php`
 - Auth and role middleware: `app/Core/Middleware.php`
 
 ### Layered design
@@ -92,18 +94,16 @@ This is a custom PHP MVC project using Controller -> Service -> Repository layer
 - Services (business rules): `app/Services/`
 - Repositories (data access): `app/Repositories/`
 - Models/entities: `app/Models/`
-- View models for page composition: `app/ViewModel/`
+- DTOs (API request/response shapes): `app/DTO/`
+- Mappers (model/DTO conversion): `app/Mappers/`
 
-### UI rendering pattern
-- Server-rendered templates with modular partials under:
-	- `app/Views/Admin/partials/`
-	- `app/Views/Products/partials/`
-	- `app/Views/Cart/partials/`
-	- `app/Views/Checkout/partials/`
-	- `app/Views/Layouts/partials/`
+### Frontend split
+- PHP exposes JSON endpoints for the Vue frontend.
+- Server-rendered PHP views have been removed from this version.
+- Postman resources are included for API testing and workflow checks.
 
 ### Notable implementation points
-- CSRF validation on sensitive POST actions: controller-level checks in `app/Controllers/`
+- JWT authentication and JSON responses for protected actions
 - Role-protected admin features: middleware checks in `app/Core/Middleware.php`
 - Order status transitions and business rules: `app/Controllers/OrderController.php`, `app/Services/OrderService.php`
 - Appointment slot management and monthly slot generation: `app/Controllers/AppointmentController.php`, `app/Services/AppointmentService.php`
@@ -130,16 +130,13 @@ This is a custom PHP MVC project using Controller -> Service -> Repository layer
 ### GDPR efforts
 - Data minimization in UI: only necessary account and order data displayed
 - Password security: hashed passwords in database
-- Session-based authentication and role restriction for protected routes
+- JWT-based authentication and role restriction for protected routes
 - Contact/booking/order data processed for service fulfillment purposes only
 - Local development email logging to `storage/emails/` for transparency/testing
 
 ### WCAG efforts
-- Semantic server-rendered HTML structure in view templates
-- Form labels and explicit input fields in auth/checkout/appointment flows
-- Keyboard-accessible standard controls (links, buttons, inputs)
-- Visible validation and status messaging via flash/error notices
-- Color/style consistency through CSS files in `public/assets/css/`
+- Frontend accessibility is handled in the separate Vue client.
+- The API returns structured validation and status responses for frontend messaging.
 
 
 ## 7. Zip Submission

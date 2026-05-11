@@ -53,7 +53,7 @@ class UserRepository extends RepositoryBase implements IUserRepository
             $user = $stmt->fetch();
             return $user instanceof User ? $user : null;
         } catch (PDOException $e) {
-            throw new RuntimeException("Error occured while trying to fetch user" . $e->getMessage());
+            throw new RuntimeException("Error: occured while trying to fetch user" . $e->getMessage());
         }
     }
 

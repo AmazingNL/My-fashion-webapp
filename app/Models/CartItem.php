@@ -8,7 +8,7 @@ class CartItem
 {
     public int $cartItemId;
     public int $userId;
-    public string $sessionId;
+    public string $cartToken;
     public int $productId;
     public int $variantId;
     public int $quantity;
@@ -17,7 +17,7 @@ class CartItem
     public function __construct(
         int $cartItemId,
         int $userId,
-        string $sessionId,
+        string $cartToken,
         int $productId,
         int $variantId,
         int $quantity,
@@ -25,7 +25,7 @@ class CartItem
     ) {
         $this->cartItemId = $cartItemId;
         $this->userId = $userId;
-        $this->sessionId = $sessionId;
+        $this->cartToken = $cartToken;
         $this->productId = $productId;
         $this->variantId = $variantId;
         $this->quantity = $quantity;

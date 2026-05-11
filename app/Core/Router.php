@@ -13,80 +13,66 @@ class Router
     public function dispatch(): void
     {
         $dispatcher = simpleDispatcher(function (RouteCollector $r) {
-            $r->get('/', ['App\Controllers\AuthController', 'showLogin']);
-            $r->post('/login', ['App\Controllers\AuthController', 'login']);
-            $r->get('/showRegistrationForm', ['App\Controllers\UserController', 'showRegistrationForm']);
-            $r->get('/viewUsers', ['App\Controllers\UserController', 'viewUsers']);
-            $r->post('/registerUser', ['App\Controllers\UserController', 'registerUser']);
-            $r->post('/logout', ['App\Controllers\AuthController', 'logout']);
-            $r->get('/aboutUs', ['App\Controllers\UserController', 'aboutUs']);
-            // Forgot password
-            $r->get('/forgotPassword', ['App\Controllers\AuthController', 'showForgotPassword']);
-            $r->post('/forgotPassword', ['App\Controllers\AuthController', 'requestReset']);
+            // Auth routes
+            $r->post('/auth/login', ['App\Controllers\AuthController', 'login']);
+            $r->post('/auth/logout', ['App\Controllers\AuthController', 'logout']);
+            $r->post('/auth/password-reset', ['App\Controllers\AuthController', 'requestReset']);
+            $r->post('/auth/password-reset/verify', ['App\Controllers\AuthController', 'verifyResetCode']);
 
-            // Reset code verification page
-            $r->get('/reset-password', ['App\Controllers\AuthController', 'showResetCode']);
-            $r->post('/reset-password/verify', ['App\Controllers\AuthController', 'verifyResetCode']);
+            // User routes
+            $r->get('/users', ['App\Controllers\UserController', 'viewUsers']);
+            $r->post('/users', ['App\Controllers\UserController', 'registerUser']);
+            $r->get('/about', ['App\Controllers\UserController', 'aboutUs']);
 
-
-
-            /// Product routes
-            $r->get('/productLists', ['App\Controllers\ProductController', 'productLists']);
+            // Product routes
+            $r->get('/products', ['App\Controllers\ProductController', 'productLists']);
             $r->get('/products/{id}', ['App\Controllers\ProductController', 'productDetails']);
 
-
             // Cart routes
-            $r->get('/viewCart', ['App\Controllers\CartController', 'viewCart']);
-            $r->post('/addToBasket', ['App\Controllers\CartController', 'addToBasket']);
-            $r->post('/updateQuantity', ['App\Controllers\CartController', 'updateQuantity']);
-            $r->post('/removeFromBasket', ['App\Controllers\CartController', 'removeFromBasket']);
-            $r->post('/clearBasket', ['App\Controllers\CartController', 'clearBasket']);
-
+            $r->get('/cart', ['App\Controllers\CartController', 'viewCart']);
+            $r->post('/cart/items', ['App\Controllers\CartController', 'addToCart']);
+            $r->addRoute('PATCH', '/cart/items', ['App\Controllers\CartController', 'updateQuantity']);
+            $r->addRoute('DELETE', '/cart/items', ['App\Controllers\CartController', 'removeFromCart']);
+            $r->addRoute('DELETE', '/cart', ['App\Controllers\CartController', 'clearCart']);
 
             // Favourite routes
             $r->get('/favourites', ['App\Controllers\FavouriteController', 'viewFavourites']);
-            $r->post('/favourites/toggle', ['App\Controllers\FavouriteController', 'toggleFavourite']);
-            $r->post('/favourites/clear', ['App\Controllers\FavouriteController', 'clearFavourites']);
+            $r->post('/favourites/items', ['App\Controllers\FavouriteController', 'toggleFavourite']);
+            $r->addRoute('DELETE', '/favourites', ['App\Controllers\FavouriteController', 'clearFavourites']);
 
-            // Appointment routes
-
+            // Admin routes
             $r->get('/admin/dashboard', ['App\Controllers\AdminController', 'dashboard']);
             $r->get('/admin/users', ['App\Controllers\AdminController', 'manageUsers']);
+            $r->addRoute('DELETE', '/admin/users/{id:\d+}', ['App\Controllers\AdminController', 'deleteUser']);
             $r->get('/admin/products', ['App\Controllers\AdminController', 'manageProducts']);
-            $r->get('/admin/addProductForm', ['App\Controllers\AdminController', 'addProductForm']);
-            $r->post('/admin/addProduct', ['App\Controllers\AdminController', 'addProduct']);
-            $r->post('/admin/users/delete', ['App\Controllers\AdminController', 'deleteUser']);
-            $r->post('/admin/products/delete', ['App\Controllers\AdminController', 'deleteProduct']);
-            $r->get('/admin/products/edit/{id}', ['App\Controllers\AdminController', 'editProductForm']);
-            $r->post('/admin/products/update', ['App\Controllers\AdminController', 'updateProduct']);
+            $r->post('/admin/products', ['App\Controllers\AdminController', 'addProduct']);
+            $r->get('/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'editProductForm']);
+            $r->addRoute('PATCH', '/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'updateProduct']);
+            $r->addRoute('DELETE', '/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'deleteProduct']);
             $r->get('/admin/orders', ['App\Controllers\AdminController', 'manageOrders']);
             $r->get('/admin/orders/{id:\d+}', ['App\Controllers\AdminController', 'orderShow']);
             $r->get('/admin/orders/{id:\d+}/items', ['App\Controllers\AdminController', 'orderItems']);
-            $r->post('/admin/orders/{id:\d+}/status', ['App\Controllers\OrderController', 'adminUpdateStatus']);
+            $r->addRoute('PATCH', '/admin/orders/{id:\d+}/status', ['App\Controllers\OrderController', 'adminUpdateStatus']);
             $r->get('/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
-            $r->post('/admin/appointments/slots/add', ['App\Controllers\AppointmentController', 'adminAddSlot']);
-            $r->post('/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
-
+            $r->post('/admin/appointments/slots', ['App\Controllers\AppointmentController', 'adminAddSlot']);
+            $r->addRoute('PATCH', '/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
 
             // Orders + Checkout
             $r->get('/orders', ['App\Controllers\OrderController', 'index']);
             $r->get('/orders/{id:\d+}', ['App\Controllers\OrderController', 'show']);
             $r->post('/orders/{id:\d+}/cancel', ['App\Controllers\OrderController', 'cancel']);
             $r->get('/checkout', ['App\Controllers\CheckoutController', 'showCheckout']);
-            $r->post('/checkout/place', ['App\Controllers\CheckoutController', 'processCheckout']);
+            $r->post('/checkout', ['App\Controllers\CheckoutController', 'processCheckout']);
             $r->get('/checkout/confirmation/{id:\d+}', ['App\Controllers\CheckoutController', 'confirmation']);
-
 
             // Customer appointment routes
             $r->get('/appointments', ['App\Controllers\AppointmentController', 'index']);
-            $r->get('/appointments/book', ['App\Controllers\AppointmentController', 'bookForm']);
-            $r->post('/appointments/book', ['App\Controllers\AppointmentController', 'book']);
-            $r->get('/appointments/{id:\d+}/edit', ['App\Controllers\AppointmentController', 'editForm']);
-            $r->post('/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
-            $r->post('/appointments/{id:\d+}/save', ['App\Controllers\AppointmentController', 'updateDetails']);
-            $r->post('/appointments/{id:\d+}/cancel', ['App\Controllers\AppointmentController', 'cancel']);
-
-
+            $r->get('/appointments/slots', ['App\Controllers\AppointmentController', 'bookForm']);
+            $r->post('/appointments', ['App\Controllers\AppointmentController', 'book']);
+            $r->get('/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'editForm']);
+            $r->addRoute('PATCH', '/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
+            $r->addRoute('PATCH', '/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'updateDetails']);
+            $r->addRoute('DELETE', '/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'cancel']);
 
         });
 
@@ -101,13 +87,11 @@ class Router
 
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
-                http_response_code(404);
-                echo "404 - Page not found";
+                $this->json($this->error('Page not found.'), 404);
                 return;
 
             case Dispatcher::METHOD_NOT_ALLOWED:
-                http_response_code(405);
-                echo "405 - Method not allowed";
+                $this->json($this->error('Method not allowed.'), 405);
                 return;
 
             case Dispatcher::FOUND:
@@ -115,8 +99,7 @@ class Router
                 $vars = $routeInfo[2];
 
                 if (!class_exists($class)) {
-                    http_response_code(500);
-                    echo "Controller not found: " . htmlspecialchars($class);
+                    $this->json($this->error('Controller not found.', ['controller' => $class]), 500);
                     return;
                 }
 
@@ -136,13 +119,15 @@ class Router
 
                     case \App\Controllers\CartController::class:
                         $productRepository = new \App\Repositories\ProductRepository();
-                        $cartService = new \App\Services\CartService($productRepository);
+                        $cartRepository = new \App\Repositories\CartRepository();
+                        $cartService = new \App\Services\CartService($productRepository, $cartRepository);
                         $controller = new $class($cartService);
                         break;
 
                     case \App\Controllers\CheckoutController::class:
                         $productRepository = new \App\Repositories\ProductRepository();
-                        $cartService = new \App\Services\CartService($productRepository);
+                        $cartRepository = new \App\Repositories\CartRepository();
+                        $cartService = new \App\Services\CartService($productRepository, $cartRepository);
 
                         $orderRepository = new \App\Repositories\OrderRepository();
                         $orderItemRepository = new \App\Repositories\OrderItemRepository();
@@ -164,7 +149,8 @@ class Router
                         $orderItemRepository = new \App\Repositories\OrderItemRepository();
                         $orderItemService = new \App\Services\OrderItemService($orderItemRepository);
                         $productRepository = new \App\Repositories\ProductRepository();
-                        $cartService = new \App\Services\CartService($productRepository);
+                        $cartRepository = new \App\Repositories\CartRepository();
+                        $cartService = new \App\Services\CartService($productRepository, $cartRepository);
                         $orderService = new \App\Services\OrderService($orderRepository, $orderItemService, $cartService);
                         $controller = new $class($orderService, $orderItemService);
                         break;
@@ -189,7 +175,8 @@ class Router
                         $orderRepository = new \App\Repositories\OrderRepository();
                         $orderItemRepository = new \App\Repositories\OrderItemRepository();
                         $orderItemService = new \App\Services\OrderItemService($orderItemRepository);
-                        $cartService = new \App\Services\CartService($productRepository);
+                        $cartRepository = new \App\Repositories\CartRepository();
+                        $cartService = new \App\Services\CartService($productRepository, $cartRepository);
                         $orderService = new \App\Services\OrderService($orderRepository, $orderItemService, $cartService);
 
                         $appointmentRepository = new \App\Repositories\AppointmentRepository();
@@ -223,16 +210,9 @@ class Router
                 }
 
                 if (!method_exists($controller, $method)) {
-                    http_response_code(500);
-                    echo "Method not found: " . htmlspecialchars($class . '::' . $method);
+                    $this->json($this->error('Method not found.', ['method' => $class . '::' . $method]), 500);
                     return;
                 }
-
-                // Ensure session exists
-                if (session_status() !== PHP_SESSION_ACTIVE) {
-                    session_start();
-                }
-
                 // Protect all admin routes
                 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
                 if (str_starts_with($path, '/admin')) {
@@ -244,5 +224,30 @@ class Router
                 return;
 
         }
+    }
+
+    private function json($response, int $statusCode): void
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($response, JSON_THROW_ON_ERROR);
+    }
+
+    private function error(string $message, array $errors = [], $data = null): array
+    {
+        $response = [
+            'success' => false,
+            'message' => $message,
+        ];
+
+        if (!empty($errors)) {
+            $response['errors'] = $errors;
+        }
+
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+
+        return $response;
     }
 }

@@ -2,34 +2,15 @@
 
 namespace App\Core;
 
+use App\Config;
+
 abstract class ControllerBase
 {
-    // Base controller code
+    private ?array $jsonInput = null;
 
-    protected function render(string $view, $data = [], $layout = 'main'): void
+    protected function jwtCode(): string
     {
-        $data['csrf'] ??= $this->csrfToken();
-
-        extract($data, EXTR_SKIP);
-
-        $content = __DIR__ . '/../Views/' . $view . '.php';
-        $layout = __DIR__ . '/../Views/Layouts/'.$layout .'.php';
-
-        if (!file_exists($content)) {
-            throw new \Exception("view file not found: " . $view);
-        }
-
-        require $layout;
-    }
-
-
-    protected function redirect(string $to, $status = 302): void
-    {
-        $statusCode = (int) $status;
-        if (!headers_sent()) {
-            header('Location: ' . $to, true, $statusCode);
-            exit;
-        }
+        return Config::jwtSecret();
     }
 
     protected function jsonResponse($data, int $statusCode = 200): void
@@ -40,90 +21,75 @@ abstract class ControllerBase
         exit;
     }
 
-    protected function input(string $key, $default = null)
+    protected function success($data = null, string $message = 'success'): array
     {
-        return $_POST[$key] ?? $_GET[$key] ?? $default;
+        return [
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+        ];
     }
 
-
-    protected function ensureSession(): void
+    protected function error(string $message, array $errors = [], $data = null): array
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-    }
+        $response = [
+            'success' => false,
+            'message' => $message,
+        ];
 
-    protected function csrfToken(): string
-    {
-        $this->ensureSession();
-        $_SESSION['csrf'] ??= bin2hex(random_bytes(16));
-        return $_SESSION['csrf'];
-    }
-
-protected function validateCsrf(): void
-{
-    $this->ensureSession();
-
-    $token = $_POST['csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-
-    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
-    $wantsJson = str_contains($accept, 'application/json');
-
-    if (empty($_SESSION['csrf']) || empty($token) || !hash_equals($_SESSION['csrf'], $token)) {
-        if ($wantsJson) {
-            $this->jsonResponse([
-                'errors' => ['Your session expired. Please refresh the page and try again.']
-            ], 403);
+        if (!empty($errors)) {
+            $response['errors'] = $errors;
         }
 
-        http_response_code(403);
-        exit('Invalid CSRF token');
-    }
-}
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
 
-    protected function csrfField(): string
-    {
-        $token = htmlspecialchars($this->csrfToken(), ENT_QUOTES, 'UTF-8');
-        return '<input type="hidden" name="csrf" value="' . $token . '">';
+        return $response;
     }
 
     protected function currentUserId(): ?int
     {
-        $this->ensureSession();
-        return isset($_SESSION['userId']) ? (int) $_SESSION['userId'] : null;
+        if (Middleware::$authUser !== null && isset(Middleware::$authUser->sub)) {
+            return (int) Middleware::$authUser->sub;
+        }
+        return null;
     }
 
-    /**
-     * Generic flash message setter - use a key to distinguish different message types
-     */
-    protected function setFlash(string $key, string $message, string $type = 'success'): void
+
+    protected function input(string $key, $default = null)
     {
-        $this->ensureSession();
-        $_SESSION[$key . '_flash'] = [
-            'message' => $message,
-            'type' => $type,
-        ];
+        $json = $this->jsonInput();
+        return $_POST[$key] ?? $json[$key] ?? $_GET[$key] ?? $default;
     }
 
-    /**
-     * Generic flash message consumer - retrieves and clears the flash for the given key
-     */
-    protected function consumeFlash(string $key = 'default'): array
+    protected function requestData(): array
     {
-        $this->ensureSession();
-        $flashKey = $key . '_flash';
-        
-        if (!isset($_SESSION[$flashKey])) {
-            return ['', ''];
+        return array_replace_recursive($_GET, $this->jsonInput(), $_POST);
+    }
+
+    private function jsonInput(): array
+    {
+        if ($this->jsonInput !== null) {
+            return $this->jsonInput;
         }
 
-        $flash = $_SESSION[$flashKey];
-        unset($_SESSION[$flashKey]);
+        $contentType = (string) ($_SERVER['CONTENT_TYPE'] ?? '');
+        if (!str_contains(strtolower($contentType), 'application/json')) {
+            $this->jsonInput = [];
+            return $this->jsonInput;
+        }
 
-        $success = ($flash['type'] ?? '') === 'success' ? ($flash['message'] ?? '') : '';
-        $error = ($flash['type'] ?? '') === 'error' ? ($flash['message'] ?? '') : '';
+        $raw = file_get_contents('php://input');
+        if ($raw === false || trim($raw) === '') {
+            $this->jsonInput = [];
+            return $this->jsonInput;
+        }
 
-        return [$success, $error];
+        $decoded = json_decode($raw, true);
+        $this->jsonInput = is_array($decoded) ? $decoded : [];
+        return $this->jsonInput;
     }
+
 
 }

@@ -11,9 +11,6 @@ interface IProductRepository
 
     public function getProductById(int $id): ?Product;
 
-    // For cart displays: include inactive products so customers can complete purchases
-    public function getProductByIdForCart(int $id): ?Product;
-
     /** Returns ['product' => ?array, 'variants' => array] from a single joined query */
     public function getProductDetailsById(int $id): array;
 
