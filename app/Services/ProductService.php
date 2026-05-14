@@ -134,7 +134,7 @@ class ProductService implements IProductService
             }
 
             $this->productRepository->commit();
-            return ['errors' => []];
+            return ['errors' => [], 'productId' => $productId];
         } catch (\Throwable $e) {
             $this->productRepository->rollBack();
             error_log("Failed to save product and variants: " . $e->getMessage());

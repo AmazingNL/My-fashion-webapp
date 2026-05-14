@@ -192,7 +192,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 ':isActive' => 1,
                 ':productId' => (int) $product->productId,
             ]);
-            return $stmt->rowCount() > 0;
+            return $this->getProductById((int) $product->productId) !== null;
         } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }

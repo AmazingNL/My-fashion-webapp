@@ -12,6 +12,20 @@ services:
         build:
             context: .           
             dockerfile: PHP.Dockerfile
+        environment:
+            MAIL_ENABLED: ${MAIL_ENABLED:-true}
+            MAIL_MAILER: ${MAIL_MAILER:-log}
+            MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-noreply@nuellasignet.com}
+            MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Nuella Signet}
+            MAILTRAP_MODE: ${MAILTRAP_MODE:-sandbox}
+            MAILTRAP_API_TOKEN: ${MAILTRAP_API_TOKEN:-}
+            MAILTRAP_INBOX_ID: ${MAILTRAP_INBOX_ID:-}
+            EMAIL_LOG_ENABLED: ${EMAIL_LOG_ENABLED:-true}
+            STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+            PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
+            PAYPAL_SECRET: ${PAYPAL_SECRET:-}
+            PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+            PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-eur}
         volumes:
             - ./:/app
         working_dir: /app

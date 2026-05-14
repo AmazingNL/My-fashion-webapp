@@ -108,6 +108,16 @@ class OrderService implements IOrderService
         return $this->orderItemService->getByOrderId($orderId);
     }
 
+    public function markPaymentCompleted(int $orderId): bool
+    {
+        $this->requireOrder($orderId);
+        return (bool) $this->orderRepo->updateStatus(
+            $orderId,
+            OrderStatus::PROCESSING->value,
+            PaymentStatus::COMPLETED->value
+        );
+    }
+
 
     /** Customer: cancel order (only before shipped/delivered) */
     public function cancelMyOrder(int $userId, int $orderId): bool

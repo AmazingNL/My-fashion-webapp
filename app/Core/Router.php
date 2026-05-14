@@ -42,11 +42,14 @@ class Router
 
             // Admin routes
             $r->get('/admin/dashboard', ['App\Controllers\AdminController', 'dashboard']);
+            $r->get('/admin/emails', ['App\Controllers\AdminController', 'emailLogs']);
+            $r->get('/admin/emails/{fileName:[A-Za-z0-9_.-]+\.html}', ['App\Controllers\AdminController', 'emailLog']);
             $r->get('/admin/users', ['App\Controllers\AdminController', 'manageUsers']);
             $r->addRoute('DELETE', '/admin/users/{id:\d+}', ['App\Controllers\AdminController', 'deleteUser']);
             $r->get('/admin/products', ['App\Controllers\AdminController', 'manageProducts']);
             $r->post('/admin/products', ['App\Controllers\AdminController', 'addProduct']);
             $r->get('/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'editProductForm']);
+            $r->post('/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'updateProduct']);
             $r->addRoute('PATCH', '/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'updateProduct']);
             $r->addRoute('DELETE', '/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'deleteProduct']);
             $r->get('/admin/orders', ['App\Controllers\AdminController', 'manageOrders']);
@@ -63,6 +66,7 @@ class Router
             $r->post('/orders/{id:\d+}/cancel', ['App\Controllers\OrderController', 'cancel']);
             $r->get('/checkout', ['App\Controllers\CheckoutController', 'showCheckout']);
             $r->post('/checkout', ['App\Controllers\CheckoutController', 'processCheckout']);
+            $r->post('/checkout/payments/confirm', ['App\Controllers\CheckoutController', 'confirmPayment']);
             $r->get('/checkout/confirmation/{id:\d+}', ['App\Controllers\CheckoutController', 'confirmation']);
 
             // Customer appointment routes
@@ -133,8 +137,11 @@ class Router
                         $orderItemRepository = new \App\Repositories\OrderItemRepository();
                         $orderItemService = new \App\Services\OrderItemService($orderItemRepository);
                         $orderService = new \App\Services\OrderService($orderRepository, $orderItemService, $cartService);
+                        $paymentService = new \App\Services\PaymentService();
+                        $emailService = new \App\Services\EmailService();
+                        $userRepository = new \App\Repositories\UserRepository();
 
-                        $controller = new $class($cartService, $orderService, $orderItemService);
+                        $controller = new $class($cartService, $orderService, $orderItemService, $paymentService, $emailService, $userRepository);
                         break;
 
 
@@ -182,11 +189,13 @@ class Router
                         $appointmentRepository = new \App\Repositories\AppointmentRepository();
                         $appointmentSlotRepository = new \App\Repositories\AppointmentSlotRepository();
                         $appointmentService = new \App\Services\AppointmentService($appointmentRepository, $appointmentSlotRepository);
+                        $emailLogService = new \App\Services\EmailLogService();
                         $controller = new $class(
                             $productService,
                             $userService,
                             $orderService,
-                            $appointmentService
+                            $appointmentService,
+                            $emailLogService
                         );
                         break;
 
