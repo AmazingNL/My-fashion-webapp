@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import AdminTabs from '../components/AdminTabs.vue'
 import Navbar from '../components/Navbar.vue'
 import { getAdminAppointments, getAdminDashboard, getAdminEmails, getAdminOrders, getAdminProducts, getAdminUsers } from '../api/adminApi'
+import { formatMoney } from '../utils/format'
 
 const stats = ref({})
 const products = ref([])
@@ -90,7 +91,7 @@ onMounted(loadAdmin)
 		<section class="admin-insight-grid">
 			<div class="admin-card">
 				<h2>Recent orders</h2>
-				<div v-for="order in latestOrders" :key="order.orderId" class="mini-record"><strong>#{{ order.orderId }} · €{{ Number(order.totalAmount || 0).toFixed(2) }}</strong><span>{{ order.status }}</span></div>
+				<div v-for="order in latestOrders" :key="order.orderId" class="mini-record"><strong>#{{ order.orderId }} · {{ formatMoney(order.totalAmount) }}</strong><span>{{ order.status }}</span></div>
 				<RouterLink class="soft-button" to="/admin/orders">Open orders</RouterLink>
 			</div>
 			<div class="admin-card">
@@ -100,7 +101,7 @@ onMounted(loadAdmin)
 			</div>
 			<div class="admin-card">
 				<h2>Latest products</h2>
-				<div v-for="product in latestProducts" :key="product.productId" class="mini-record"><strong>{{ product.productName }}</strong><span>{{ product.category }} · €{{ Number(product.price || 0).toFixed(2) }}</span></div>
+				<div v-for="product in latestProducts" :key="product.productId" class="mini-record"><strong>{{ product.productName }}</strong><span>{{ product.category }} · {{ formatMoney(product.price) }}</span></div>
 				<RouterLink class="soft-button" to="/admin/products">Open products</RouterLink>
 			</div>
 		</section>

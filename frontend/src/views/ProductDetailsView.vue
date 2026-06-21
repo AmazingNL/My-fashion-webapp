@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar.vue'
 import { getProduct } from '../api/productApi'
 import { addToCart } from '../stores/cartStore'
 import { isFavourite, toggleStoredFavourite } from '../stores/favouriteStore'
+import { formatMoney } from '../utils/format'
 
 const route = useRoute()
 const product = ref(null)
@@ -60,7 +61,7 @@ function submitFavourite() {
 				<p class="section-kicker">{{ product.category }}</p>
 				<h1>{{ product.productName }}</h1>
 				<p>{{ product.description }}</p>
-				<strong>€{{ Number(product.price || 0).toFixed(2) }}</strong>
+				<strong>{{ formatMoney(product.price) }}</strong>
 				<div class="detail-badges" aria-label="Product highlights">
 					<span>Soft tailoring</span>
 					<span>Event ready</span>

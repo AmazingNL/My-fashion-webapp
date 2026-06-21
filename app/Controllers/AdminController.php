@@ -12,10 +12,10 @@ use App\Mappers\ProductResponseMapper;
 use App\Mappers\ProductRequestMapper;
 use App\Mappers\ResponseUserMapper;
 use App\Services\EmailLogService;
-use App\Services\IAppointmentService;
-use App\Services\IOrderService;
-use App\Services\IProductService;
-use App\Services\IUserService;
+use App\Services\Interfaces\IAppointmentService;
+use App\Services\Interfaces\IOrderService;
+use App\Services\Interfaces\IProductService;
+use App\Services\Interfaces\IUserService;
 use RuntimeException;
 
 class AdminController extends ControllerBase

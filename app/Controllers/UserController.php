@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Mappers\RegistrationRequestMapper;
 use App\Mappers\ResponseUserMapper;
-use App\Services\IUserService;
+use App\Services\Interfaces\IUserService;
 use App\Core\ControllerBase;
 
 class UserController extends ControllerBase

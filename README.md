@@ -42,84 +42,7 @@ This project follows the class Docker setup style:
 ### Customer account
 - Email: test@gmail.com
 - Password: Customer123!
-
-### Database credentials (Docker)
-- Host: mysql (inside Docker network) or localhost:3306 (from host)
-- Database: developmentdb
-- Username: root
-- Password: secret123
-
-### Mailtrap email service
-Copy `.env.example` to `.env`, then add your Mailtrap values:
-
-```env
-MAIL_ENABLED=true
-MAIL_MAILER=mailtrap
-MAIL_FROM_EMAIL=noreply@nuellasignet.com
-MAIL_FROM_NAME="Nuella Signet"
-MAILTRAP_MODE=sandbox
-MAILTRAP_API_TOKEN=your_mailtrap_api_token
-MAILTRAP_INBOX_ID=your_mailtrap_sandbox_inbox_id
-EMAIL_LOG_ENABLED=true
-```
-
-Use `MAILTRAP_MODE=sandbox` to view test emails inside your Mailtrap sandbox inbox. For production sending through Mailtrap Email Sending, use:
-
-```env
-MAILTRAP_MODE=production
-MAILTRAP_API_TOKEN=your_mailtrap_sending_api_token
-MAIL_FROM_EMAIL=verified-sender@yourdomain.com
-```
-
-When `EMAIL_LOG_ENABLED=true`, the app also keeps local copies in `storage/emails/`, which admins can view from `/admin/emails`.
-
-### Payment service
-Stripe and PayPal are optional but supported for checkout. Add test credentials to `.env` before using online payments:
-
-```env
-PAYMENT_CURRENCY=eur
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-PAYPAL_CLIENT_ID=your_paypal_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-PAYPAL_MODE=sandbox
-```
-
-Bank transfer checkout works without external payment credentials. Stripe and PayPal create provider checkout sessions/orders, then the app confirms payment through `POST /checkout/payments/confirm` and sends the order confirmation email.
-
-## 3. Database Export And Import
-
-### Included export files
-- Root export: `lecturer_full_dump.sql`
-
-### Generate a fresh export (UTF-8 SQL)
-```bash
-docker compose exec -T mysql mariadb-dump \
-	-uroot -psecret123 \
-	--databases developmentdb \
-	--routines --events --triggers \
-	--single-transaction \
-	--default-character-set=utf8mb4 \
-	> lecturer_full_dump.sql
-```
-
-### Import export file
-```bash
-iconv -f UTF-16LE -t UTF-8 lecturer_full_dump.sql > lecturer_full_dump_utf8.sql
-docker compose exec -T mysql mariadb -uroot -psecret123 developmentdb < lecturer_full_dump_utf8.sql
-```
-
-### Verify data loaded
-```bash
-docker compose exec -T mysql mariadb -uroot -psecret123 -e "
-USE developmentdb;
-SHOW TABLES;
-SELECT 'users' AS table_name, COUNT(*) AS rows_count FROM users
-UNION ALL SELECT 'products', COUNT(*) FROM products
-UNION ALL SELECT 'orders', COUNT(*) FROM orders;
-"
-```
-
-## 4. Architecture, Patterns, And File References
+### Architecture, Patterns, And File References
 
 This is a custom PHP API project using Controller -> Service -> Repository layering.
 
@@ -235,12 +158,11 @@ The current Docker environment was smoke-tested against `http://localhost` with 
 - The API returns structured validation and status responses for frontend messaging.
 
 
-## 9. Zip Submission
+## 9. AI Disclosure
 
-Submit a `.zip` of the entire project root folder (`My-fashion-webapp`) including:
-- source code
-- Docker files
-- README
-- root database export `lecturer_full_dump.sql`
+An AI disclosure statement describing how AI tools were used during development is provided in [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md).
+
+## 10. Zip Submission
+
 
 

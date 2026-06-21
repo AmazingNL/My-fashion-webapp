@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Services\Interfaces\IPasswordResetService;
+
 use App\Repositories\PasswordResetTokenRepository;
 
 class PasswordResetService implements IPasswordResetService

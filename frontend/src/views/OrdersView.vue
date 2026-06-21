@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import Navbar from '../components/Navbar.vue'
 import { cancelOrder, getOrder, getOrders } from '../api/orderApi'
 import { bookAppointment, cancelAppointment, getAppointments, getAppointmentSlots } from '../api/appointmentApi'
+import { formatMoney } from '../utils/format'
 
 const orders = ref([])
 const orderItemsById = reactive({})
@@ -102,7 +103,7 @@ onMounted(() => {
 						<div class="table-row">
 							<span>#{{ order.orderId }}</span>
 							<span>{{ order.status }}</span>
-							<span>€{{ Number(order.totalAmount || 0).toFixed(2) }}</span>
+							<span>{{ formatMoney(order.totalAmount) }}</span>
 							<span class="row-actions">
 								<button @click="toggleOrderItems(order.orderId)">{{ expandedOrderId === order.orderId ? 'Hide items' : 'View items' }}</button>
 								<button class="text-danger" @click="submitCancelOrder(order.orderId)">Cancel</button>
@@ -114,7 +115,7 @@ onMounted(() => {
 									<strong>Product #{{ item.productId }}</strong>
 									<span>Variant #{{ item.variantId }}</span>
 									<span>Quantity: {{ item.quantity }}</span>
-									<span>Price: €{{ Number(item.price || 0).toFixed(2) }}</span>
+									<span>Price: {{ formatMoney(item.price) }}</span>
 								</div>
 							</div>
 							<p v-else class="empty-state">No items found for this order.</p>

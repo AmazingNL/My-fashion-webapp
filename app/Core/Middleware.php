@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Core;
 
-use App\Config;
 use Exception;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -20,7 +19,7 @@ class Middleware
         $authHeader = self::authorizationHeader();
 
         if ($authHeader === '' || !preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $matches)) {
-            self::jsonResponse(self::error('Authentication is required.'), 401);
+            ApiResponse::sendAndExit(ApiResponse::error('Authentication is required.'), 401);
         }
 
         $token = $matches[1];
@@ -28,7 +27,7 @@ class Middleware
             $decoded = JWT::decode($token, new Key(Config::jwtSecret(), 'HS256'));
             self::$authUser = $decoded;
         } catch (Exception $e) {
-            self::jsonResponse(self::error('Invalid or expired token'), 401);
+            ApiResponse::sendAndExit(ApiResponse::error('Invalid or expired token'), 401);
         }
     }
 
@@ -42,14 +41,13 @@ class Middleware
 
         $role = self::$authUser->role;
         if ($role !== 'admin') {
-            self::jsonResponse(self::error('Admin access is required.'), 403);
-            exit;
+            ApiResponse::sendAndExit(ApiResponse::error('Admin access is required.'), 403);
         }
     }
 
 
     /**
-     * Check if user is customer (not admin)
+     * Check if user is customer and not admin
      */
     public static function requireCustomer(): void
     {
@@ -57,35 +55,8 @@ class Middleware
         $role = self::$authUser->role;
 
         if ($role !== 'customer') {
-            self::jsonResponse(self::error('Customer access is required.'), 403);
-            exit;
+            ApiResponse::sendAndExit(ApiResponse::error('Customer access is required.'), 403);
         }
-    }
-
-    private static function error(string $message, array $errors = [], $data = null): array
-    {
-        $response = [
-            'success' => false,
-            'message' => $message,
-        ];
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        return $response;
-    }
-
-    private static function jsonResponse($data, int $statusCode = 200): void
-    {
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_THROW_ON_ERROR);
-        exit;
     }
 
     private static function authorizationHeader(): string

@@ -31,7 +31,7 @@ class Router
             // Cart routes
             $r->get('/cart', ['App\Controllers\CartController', 'viewCart']);
             $r->post('/cart/items', ['App\Controllers\CartController', 'addToCart']);
-            $r->addRoute('PATCH', '/cart/items', ['App\Controllers\CartController', 'updateQuantity']);
+            $r->addRoute(['PATCH', 'PUT'],'/cart/items', ['App\Controllers\CartController', 'updateQuantity']);
             $r->addRoute('DELETE', '/cart/items', ['App\Controllers\CartController', 'removeFromCart']);
             $r->addRoute('DELETE', '/cart', ['App\Controllers\CartController', 'clearCart']);
 
@@ -50,15 +50,15 @@ class Router
             $r->post('/admin/products', ['App\Controllers\AdminController', 'addProduct']);
             $r->get('/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'editProductForm']);
             $r->post('/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'updateProduct']);
-            $r->addRoute('PATCH', '/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'updateProduct']);
+            $r->addRoute(['PATCH', 'PUT'],'/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'updateProduct']);
             $r->addRoute('DELETE', '/admin/products/{id:\d+}', ['App\Controllers\AdminController', 'deleteProduct']);
             $r->get('/admin/orders', ['App\Controllers\AdminController', 'manageOrders']);
             $r->get('/admin/orders/{id:\d+}', ['App\Controllers\AdminController', 'orderShow']);
             $r->get('/admin/orders/{id:\d+}/items', ['App\Controllers\AdminController', 'orderItems']);
-            $r->addRoute('PATCH', '/admin/orders/{id:\d+}/status', ['App\Controllers\OrderController', 'adminUpdateStatus']);
+            $r->addRoute(['PATCH', 'PUT'],'/admin/orders/{id:\d+}/status', ['App\Controllers\OrderController', 'adminUpdateStatus']);
             $r->get('/admin/appointments', ['App\Controllers\AppointmentController', 'adminIndex']);
             $r->post('/admin/appointments/slots', ['App\Controllers\AppointmentController', 'adminAddSlot']);
-            $r->addRoute('PATCH', '/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
+            $r->addRoute(['PATCH', 'PUT'],'/admin/appointments/{id:\d+}/status', ['App\Controllers\AppointmentController', 'adminSetStatus']);
 
             // Orders + Checkout
             $r->get('/orders', ['App\Controllers\OrderController', 'index']);
@@ -74,8 +74,8 @@ class Router
             $r->get('/appointments/slots', ['App\Controllers\AppointmentController', 'bookForm']);
             $r->post('/appointments', ['App\Controllers\AppointmentController', 'book']);
             $r->get('/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'editForm']);
-            $r->addRoute('PATCH', '/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
-            $r->addRoute('PATCH', '/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'updateDetails']);
+            $r->addRoute(['PATCH', 'PUT'],'/appointments/{id:\d+}/slot', ['App\Controllers\AppointmentController', 'updateSlot']);
+            $r->addRoute(['PATCH', 'PUT'],'/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'updateDetails']);
             $r->addRoute('DELETE', '/appointments/{id:\d+}', ['App\Controllers\AppointmentController', 'cancel']);
 
         });
@@ -91,11 +91,11 @@ class Router
 
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
-                $this->json($this->error('Page not found.'), 404);
+                ApiResponse::send(ApiResponse::error('Page not found.'), 404);
                 return;
 
             case Dispatcher::METHOD_NOT_ALLOWED:
-                $this->json($this->error('Method not allowed.'), 405);
+                ApiResponse::send(ApiResponse::error('Method not allowed.'), 405);
                 return;
 
             case Dispatcher::FOUND:
@@ -103,7 +103,7 @@ class Router
                 $vars = $routeInfo[2];
 
                 if (!class_exists($class)) {
-                    $this->json($this->error('Controller not found.', ['controller' => $class]), 500);
+                    ApiResponse::send(ApiResponse::error('Controller not found.', ['controller' => $class]), 500);
                     return;
                 }
 
@@ -219,7 +219,7 @@ class Router
                 }
 
                 if (!method_exists($controller, $method)) {
-                    $this->json($this->error('Method not found.', ['method' => $class . '::' . $method]), 500);
+                    ApiResponse::send(ApiResponse::error('Method not found.', ['method' => $class . '::' . $method]), 500);
                     return;
                 }
                 // Protect all admin routes
@@ -235,28 +235,4 @@ class Router
         }
     }
 
-    private function json($response, int $statusCode): void
-    {
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($response, JSON_THROW_ON_ERROR);
-    }
-
-    private function error(string $message, array $errors = [], $data = null): array
-    {
-        $response = [
-            'success' => false,
-            'message' => $message,
-        ];
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        return $response;
-    }
 }

@@ -9,7 +9,7 @@ use App\Mappers\AppointmentRequestMapper;
 use App\Mappers\AppointmentSlotMapper;
 use App\Mappers\AppointmentSlotRequestMapper;
 use App\Models\AppointmentStatus;
-use App\Services\IAppointmentService;
+use App\Services\Interfaces\IAppointmentService;
 
 final class AppointmentController extends ControllerBase
 {

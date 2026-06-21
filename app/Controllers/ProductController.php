@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Mappers\ProductResponseMapper;
-use App\Services\IProductService;
+use App\Services\Interfaces\IProductService;
 use App\Core\ControllerBase;
 
 class ProductController extends ControllerBase

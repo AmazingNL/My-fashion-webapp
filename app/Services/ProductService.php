@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Services\Interfaces\IProductService;
+
 use App\DTO\ProductRequestDto;
 use App\DTO\ProductVariantRequestDto;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Repositories\IProductRepository;
+use App\Repositories\Interfaces\IProductRepository;
 
 class ProductService implements IProductService
 {

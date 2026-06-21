@@ -9,14 +9,21 @@ use RuntimeException;
 class PaymentService
 {
     private string $currency;
+    private bool $testMode;
 
     public function __construct()
     {
         $this->currency = strtolower((string) ($_ENV['PAYMENT_CURRENCY'] ?? 'eur'));
+        // When enabled, online payments are simulated locally (no real Stripe/PayPal calls).
+        $this->testMode = filter_var($_ENV['PAYMENT_TEST_MODE'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 
     public function createPayment(string $provider, int $orderId, float $amount, string $returnUrl, array $items = []): array
     {
+        if ($this->testMode) {
+            return $this->createTestPayment($provider, $orderId, $returnUrl);
+        }
+
         return match ($this->normalizeProvider($provider)) {
             'stripe' => $this->createStripeCheckoutSession($orderId, $amount, $returnUrl, $items),
             'paypal' => $this->createPayPalOrder($orderId, $amount, $returnUrl),
@@ -26,6 +33,17 @@ class PaymentService
 
     public function confirmPayment(string $provider, string $paymentReference, int $orderId, float $expectedAmount): array
     {
+        if ($this->testMode) {
+            return [
+                'paid' => true,
+                'provider' => $this->normalizeProvider($provider),
+                'reference' => $paymentReference,
+                'status' => 'paid',
+                'amount' => $expectedAmount,
+                'test' => true,
+            ];
+        }
+
         return match ($this->normalizeProvider($provider)) {
             'stripe' => $this->confirmStripePayment($paymentReference, $orderId),
             'paypal' => $this->capturePayPalOrder($paymentReference, $orderId, $expectedAmount),
@@ -40,11 +58,40 @@ class PaymentService
 
     public function assertConfigured(string $provider): void
     {
+        // In test mode the providers are simulated, so no real credentials are needed.
+        if ($this->testMode) {
+            return;
+        }
+
         match ($this->normalizeProvider($provider)) {
             'stripe' => $this->requiredEnv('STRIPE_SECRET_KEY', 'Stripe'),
             'paypal' => $this->requiredEnv('PAYPAL_CLIENT_ID', 'PayPal') && $this->requiredEnv('PAYPAL_SECRET', 'PayPal'),
             default => true,
         };
+    }
+
+    /**
+     * Simulate an online payment for local testing: send the browser straight back to the
+     * return URL with success params so the normal confirm flow runs without a real gateway.
+     */
+    private function createTestPayment(string $provider, int $orderId, string $returnUrl): array
+    {
+        $reference = 'test_' . $orderId . '_' . bin2hex(random_bytes(6));
+
+        $redirectUrl = $this->appendQuery($returnUrl, [
+            'payment' => 'success',
+            'provider' => $this->normalizeProvider($provider),
+            'orderId' => (string) $orderId,
+            'session_id' => $reference,
+            'token' => $reference,
+        ]);
+
+        return [
+            'provider' => $this->normalizeProvider($provider),
+            'reference' => $reference,
+            'redirectUrl' => $redirectUrl,
+            'test' => true,
+        ];
     }
 
     private function createStripeCheckoutSession(int $orderId, float $amount, string $returnUrl, array $items): array

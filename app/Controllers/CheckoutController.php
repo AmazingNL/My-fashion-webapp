@@ -14,9 +14,9 @@ use App\Models\OrderStatus;
 use App\Models\PaymentStatus;
 use App\Repositories\UserRepository;
 use App\Services\EmailService;
-use App\Services\ICartService;
-use App\Services\IOrderService;
-use App\Services\IOrderItemService;
+use App\Services\Interfaces\ICartService;
+use App\Services\Interfaces\IOrderService;
+use App\Services\Interfaces\IOrderItemService;
 use App\Services\PaymentService;
 
 class CheckoutController extends ControllerBase

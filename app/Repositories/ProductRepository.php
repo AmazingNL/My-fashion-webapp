@@ -6,7 +6,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Mappers\ProductModelMapper;
 use App\Mappers\ProductVariantMapper;
-use App\Repositories\IProductRepository;
+use App\Repositories\Interfaces\IProductRepository;
 use App\Core\RepositoryBase;
 use PDOException;
 use RuntimeException;

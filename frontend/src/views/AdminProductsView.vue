@@ -9,6 +9,7 @@ import {
 	getAdminProducts,
 	updateAdminProduct,
 } from '../api/adminApi'
+import { formatMoney } from '../utils/format'
 
 const products = ref([])
 const message = ref('')
@@ -212,7 +213,7 @@ onMounted(loadProducts)
 					<div v-for="product in products" :key="product.productId" class="table-row">
 						<span>{{ product.productName }}</span>
 						<span>{{ product.category }}</span>
-						<span>€{{ Number(product.price || 0).toFixed(2) }}</span>
+						<span>{{ formatMoney(product.price) }}</span>
 						<span class="row-actions"><button @click="editProduct(product)">Edit</button><button class="text-danger" @click="removeProduct(product.productId)">Delete</button></span>
 					</div>
 				</div>

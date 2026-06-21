@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use App\Repositories\Interfaces\IAppointmentRepository;
+
 use App\Core\RepositoryBase;
 use App\Models\Appointment;
 use App\Models\AppointmentStatus;

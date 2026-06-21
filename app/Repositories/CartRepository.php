@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Repositories\Interfaces\ICartRepository;
+
 use App\Core\RepositoryBase;
 use PDO;
 use PDOException;

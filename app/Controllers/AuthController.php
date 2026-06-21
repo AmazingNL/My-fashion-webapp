@@ -6,9 +6,9 @@ use App\Core\ControllerBase;
 use App\Mappers\LoginMapper;
 use App\Mappers\PasswordResetRequestMapper;
 use App\Mappers\ResponseUserMapper;
-use App\Services\IUserService;
+use App\Services\Interfaces\IUserService;
 use App\Services\EmailService;
-use App\Services\IPasswordResetService;
+use App\Services\Interfaces\IPasswordResetService;
 use Firebase\JWT\JWT;
 
 class AuthController extends ControllerBase

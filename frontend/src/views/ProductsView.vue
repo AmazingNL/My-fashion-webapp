@@ -4,6 +4,7 @@ import { getProducts } from '../api/productApi'
 import { clearStoredFavourites, favouriteState, isFavourite, toggleStoredFavourite } from '../stores/favouriteStore'
 import Navbar from '../components/Navbar.vue'
 import ProductCard from '../components/ProductCard.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 
 const products = ref([])
 const loading = ref(true)
@@ -172,7 +173,7 @@ function submitClearFavourites() {
                 <p v-if="loading" class="status-message">Loading collection...</p>
                 <p v-else-if="error" class="status-message">{{ error }}</p>
 
-                <div class="product-grid">
+                <div class="grid grid-cols-1 gap-x-[18px] gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <ProductCard
                         v-for="(product, index) in filteredProducts"
                         :key="product.productId || product.productName"
@@ -198,26 +199,6 @@ function submitClearFavourites() {
             </div>
         </section>
 
-        <footer class="figma-footer">
-            <div>
-                <a class="brand brand-footer" href="/">
-                    <span class="brand-mark"></span>
-                    <span>Nuella Signet</span>
-                </a>
-                <p>Heritage-inspired clothing made for modern celebrations.</p>
-            </div>
-            <div>
-                <h3>Quick links</h3>
-                <a href="/">Home</a>
-                <a href="/products">Shop</a>
-                <a href="mailto:appointments@nuellasignet.com">Appointments</a>
-            </div>
-            <div>
-                <h3>Follow us</h3>
-                <span>Instagram</span>
-                <span>TikTok</span>
-                <span>Pinterest</span>
-            </div>
-        </footer>
+        <SiteFooter />
     </main>
 </template>

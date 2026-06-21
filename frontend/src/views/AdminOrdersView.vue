@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import AdminTabs from '../components/AdminTabs.vue'
 import Navbar from '../components/Navbar.vue'
 import { getAdminOrderItems, getAdminOrders, updateAdminOrderStatus } from '../api/adminApi'
+import { formatMoney } from '../utils/format'
 
 const orders = ref([])
 const adminOrderItemsById = reactive({})
@@ -63,7 +64,7 @@ onMounted(loadOrders)
 					<div v-for="order in orders" :key="order.orderId" class="order-table-block">
 						<div class="table-row">
 							<span>#{{ order.orderId }}</span>
-							<span>€{{ Number(order.totalAmount || 0).toFixed(2) }}</span>
+							<span>{{ formatMoney(order.totalAmount) }}</span>
 							<span>{{ order.status }}</span>
 							<span class="row-actions">
 								<select :value="order.status" @change="setOrderStatus(order.orderId, $event.target.value)"><option>pending</option><option>processing</option><option>shipped</option><option>delivered</option><option>cancelled</option></select>
@@ -76,7 +77,7 @@ onMounted(loadOrders)
 									<strong>Product #{{ item.productId }}</strong>
 									<span>Variant #{{ item.variantId }}</span>
 									<span>Quantity: {{ item.quantity }}</span>
-									<span>Price: €{{ Number(item.price || 0).toFixed(2) }}</span>
+									<span>Price: {{ formatMoney(item.price) }}</span>
 								</div>
 							</div>
 							<p v-else class="empty-state">No items found for this order.</p>

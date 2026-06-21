@@ -9,8 +9,8 @@ use App\Core\Middleware;
 use App\Mappers\OrderMapper;
 use App\Mappers\UpdateOrderStatusMapper;
 use App\Models\OrderStatus;
-use App\Services\IOrderService;
-use App\Services\IOrderItemService;
+use App\Services\Interfaces\IOrderService;
+use App\Services\Interfaces\IOrderItemService;
 
 class OrderController extends ControllerBase
 {

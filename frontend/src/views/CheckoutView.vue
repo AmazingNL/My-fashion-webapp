@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Navbar from '../components/Navbar.vue'
 import { confirmPayment, getCheckout, placeOrder } from '../api/checkoutApi'
+import { formatMoney } from '../utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,7 +111,7 @@ async function submitCheckout() {
 				</button>
 				<p v-if="message" class="status-message">{{ message }}</p>
 			</form>
-			<aside class="checkout-summary"><h2>Order summary</h2><p>{{ checkout.cartItems?.length || 0 }} items</p><strong>€{{ Number(checkout.total || 0).toFixed(2) }}</strong><span>Confirmation email is sent after payment is confirmed.</span></aside>
+			<aside class="checkout-summary"><h2>Order summary</h2><p>{{ checkout.cartItems?.length || 0 }} items</p><strong>{{ formatMoney(checkout.total) }}</strong><span>Confirmation email is sent after payment is confirmed.</span></aside>
 		</section>
 	</main>
 </template>

@@ -2,8 +2,6 @@
 
 namespace App\Core;
 
-use App\Config;
-
 abstract class ControllerBase
 {
     private ?array $jsonInput = null;
@@ -15,37 +13,17 @@ abstract class ControllerBase
 
     protected function jsonResponse($data, int $statusCode = 200): void
     {
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_THROW_ON_ERROR);
-        exit;
+        ApiResponse::sendAndExit($data, $statusCode);
     }
 
     protected function success($data = null, string $message = 'success'): array
     {
-        return [
-            'success' => true,
-            'message' => $message,
-            'data' => $data,
-        ];
+        return ApiResponse::success($data, $message);
     }
 
     protected function error(string $message, array $errors = [], $data = null): array
     {
-        $response = [
-            'success' => false,
-            'message' => $message,
-        ];
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        return $response;
+        return ApiResponse::error($message, $errors, $data);
     }
 
     protected function currentUserId(): ?int
