@@ -9,13 +9,16 @@ class EmailService
     private string $fromEmail;
     private string $fromName;
     private bool $enabled;
+    private string $mailer;
+    private bool $logEnabled;
 
     public function __construct()
     {
-        $this->fromEmail = 'noreply@AfroFashion.com';
-        $this->fromName = 'Afro Fashion';
-        // In production, set this to true when mail server is configured
-        $this->enabled = true; // For demonstration, we'll log emails
+        $this->fromEmail = $this->env('MAIL_FROM_EMAIL', 'noreply@nuellasignet.com');
+        $this->fromName = $this->env('MAIL_FROM_NAME', 'Nuella Signet');
+        $this->enabled = $this->envBool('MAIL_ENABLED', true);
+        $this->mailer = strtolower($this->env('MAIL_MAILER', 'log'));
+        $this->logEnabled = $this->envBool('EMAIL_LOG_ENABLED', true);
     }
 
     /**
@@ -77,11 +80,14 @@ class EmailService
 
         $itemsHtml = '';
         foreach ($items as $item) {
+            $productName = htmlspecialchars((string) ($item['productName'] ?? $item['name'] ?? 'Product #' . ($item['productId'] ?? '')), ENT_QUOTES, 'UTF-8');
+            $quantity = (int) ($item['quantity'] ?? 0);
+            $price = (float) ($item['price'] ?? 0);
             $itemsHtml .= "<tr>
-                <td>{$item['productName']}</td>
-                <td>{$item['quantity']}</td>
-                <td>\${$item['price']}</td>
-                <td>\$" . number_format($item['price'] * $item['quantity'], 2) . "</td>
+                <td>{$productName}</td>
+                <td>{$quantity}</td>
+                <td>&euro;" . number_format($price, 2) . "</td>
+                <td>&euro;" . number_format($price * $quantity, 2) . "</td>
             </tr>";
         }
 
@@ -117,7 +123,7 @@ class EmailService
                         </tbody>
                     </table>
                     
-                    <p class='total'>Total: \$" . number_format($total, 2) . "</p>
+                    <p class='total'>Total: &euro;" . number_format($total, 2) . "</p>
                     
                     <p>We'll send you another email when your order ships.</p>
                     <p>If you have any questions about your order, please contact our customer service.</p>
@@ -260,8 +266,91 @@ class EmailService
     private function send(string $to, string $subject, string $message): bool
     {
         if (!$this->enabled) {
-            return true; // Skip sending if disabled
+            return true;
         }
+
+        $sent = match ($this->mailer) {
+            'mailtrap' => $this->sendViaMailtrap($to, $subject, $message),
+            default => false,
+        };
+
+        if ($this->logEnabled || !$sent) {
+            $this->saveEmailLog($to, $subject, $message);
+        }
+
+        return $sent || $this->logEnabled;
+    }
+
+    private function sendViaMailtrap(string $to, string $subject, string $message): bool
+    {
+        $token = $this->env('MAILTRAP_API_TOKEN');
+        if ($token === '') {
+            return false;
+        }
+
+        $mode = strtolower($this->env('MAILTRAP_MODE', 'sandbox'));
+        $endpoint = $mode === 'production'
+            ? 'https://send.api.mailtrap.io/api/send'
+            : 'https://sandbox.api.mailtrap.io/api/send/' . rawurlencode($this->env('MAILTRAP_INBOX_ID'));
+
+        if ($mode !== 'production' && $this->env('MAILTRAP_INBOX_ID') === '') {
+            return false;
+        }
+
+        $payload = json_encode([
+            'from' => [
+                'email' => $this->fromEmail,
+                'name' => $this->fromName,
+            ],
+            'to' => [[
+                'email' => $to,
+            ]],
+            'subject' => $subject,
+            'html' => $message,
+            'category' => 'transactional',
+        ], JSON_THROW_ON_ERROR);
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($endpoint);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Content-Type: application/json',
+                ],
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_TIMEOUT => 20,
+            ]);
+
+            curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+            return $status >= 200 && $status < 300;
+        }
+
+        $raw = @file_get_contents($endpoint, false, stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => implode("\r\n", [
+                    'Authorization: Bearer ' . $token,
+                    'Content-Type: application/json',
+                ]),
+                'content' => $payload,
+                'timeout' => 20,
+                'ignore_errors' => true,
+            ],
+        ]));
+
+        $statusLine = $http_response_header[0] ?? 'HTTP/1.1 500';
+        preg_match('/\s(\d{3})\s/', $statusLine, $matches);
+        $status = (int) ($matches[1] ?? 500);
+
+        return $raw !== false && $status >= 200 && $status < 300;
+    }
+
+    private function saveEmailLog(string $to, string $subject, string $message): void
+    {
         $logDir = __DIR__ . '/../../storage/emails';
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);
@@ -270,8 +359,18 @@ class EmailService
         $filename = $logDir . '/' . date('Y-m-d_His') . '_' . md5($to . $subject) . '.html';
         $content = "To: {$to}\nSubject: {$subject}\n\n{$message}";
         file_put_contents($filename, $content);
+    }
 
-        return true; // Return true for demonstration
+    private function env(string $key, string $default = ''): string
+    {
+        $value = $_ENV[$key] ?? getenv($key);
+        return $value === false || $value === null ? $default : trim((string) $value);
+    }
+
+    private function envBool(string $key, bool $default): bool
+    {
+        $value = $this->env($key, $default ? 'true' : 'false');
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
     }
 
     private function emailStyles(string $extra = ''): string

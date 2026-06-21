@@ -6,7 +6,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Mappers\ProductModelMapper;
 use App\Mappers\ProductVariantMapper;
-use App\Repositories\IProductRepository;
+use App\Repositories\Interfaces\IProductRepository;
 use App\Core\RepositoryBase;
 use PDOException;
 use RuntimeException;
@@ -192,7 +192,7 @@ class ProductRepository extends RepositoryBase implements IProductRepository
                 ':isActive' => 1,
                 ':productId' => (int) $product->productId,
             ]);
-            return $stmt->rowCount() > 0;
+            return $this->getProductById((int) $product->productId) !== null;
         } catch (PDOException $e) {
             throw new RuntimeException("DB error" . $e);
         }

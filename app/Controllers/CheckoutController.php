@@ -12,25 +12,37 @@ use App\Mappers\CheckoutRequestMapper;
 use App\Mappers\OrderMapper;
 use App\Models\OrderStatus;
 use App\Models\PaymentStatus;
-use App\Services\ICartService;
-use App\Services\IOrderService;
-use App\Services\IOrderItemService;
+use App\Repositories\UserRepository;
+use App\Services\EmailService;
+use App\Services\Interfaces\ICartService;
+use App\Services\Interfaces\IOrderService;
+use App\Services\Interfaces\IOrderItemService;
+use App\Services\PaymentService;
 
 class CheckoutController extends ControllerBase
 {
     private ICartService $cartService;
     private IOrderService $orderService;
     private IOrderItemService $orderItemService;
+    private PaymentService $paymentService;
+    private EmailService $emailService;
+    private UserRepository $userRepository;
 
     // Wire the checkout controller to cart and order services.
     public function __construct(
         ICartService $cartService,
         IOrderService $orderService,
-        IOrderItemService $orderItemService
+        IOrderItemService $orderItemService,
+        PaymentService $paymentService,
+        EmailService $emailService,
+        UserRepository $userRepository
     ) {
         $this->cartService = $cartService;
         $this->orderService = $orderService;
         $this->orderItemService = $orderItemService;
+        $this->paymentService = $paymentService;
+        $this->emailService = $emailService;
+        $this->userRepository = $userRepository;
     }
 
     // Show the checkout form and the current cart summary.
@@ -77,6 +89,48 @@ class CheckoutController extends ControllerBase
         }
     }
 
+    public function confirmPayment(): void
+    {
+        try {
+            Middleware::requireAuth();
+            Middleware::requireCustomer();
+            $userId = $this->requireCheckoutUserIdOrFail();
+
+            $data = $this->requestData();
+            $orderId = (int) ($data['orderId'] ?? 0);
+            $provider = strtolower(trim((string) ($data['provider'] ?? '')));
+            $reference = trim((string) ($data['paymentReference'] ?? ''));
+
+            if ($orderId <= 0 || $provider === '' || $reference === '') {
+                $this->jsonResponse($this->error('Payment confirmation details are missing.'), 422);
+            }
+
+            $order = $this->orderService->getMyOrder($userId, $orderId);
+            if ($order->paymentStatus === PaymentStatus::COMPLETED) {
+                $this->jsonResponse($this->success([
+                    'orderId' => $orderId,
+                    'paymentStatus' => $order->paymentStatus->value,
+                ], 'Payment already confirmed.'));
+            }
+
+            $payment = $this->paymentService->confirmPayment($provider, $reference, $orderId, (float) $order->totalAmount);
+            if (empty($payment['paid'])) {
+                $this->jsonResponse($this->error('Payment has not been completed yet.', ['status' => (string) ($payment['status'] ?? 'unknown')]), 422);
+            }
+
+            $this->orderService->markPaymentCompleted($orderId);
+            $items = $this->orderItemService->getByOrderId($orderId);
+            $this->sendOrderEmail($userId, $orderId, (float) $order->totalAmount, $items);
+
+            $this->jsonResponse($this->success([
+                'orderId' => $orderId,
+                'payment' => $payment,
+            ], 'Payment confirmed. Your order confirmation email has been sent.'));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Payment confirmation failed.', ['detail' => $e->getMessage()]), 500);
+        }
+    }
+
     // Ensure we have a valid logged-in customer id before placing an order.
     private function requireCheckoutUserIdOrFail(): int
     {
@@ -118,6 +172,11 @@ class CheckoutController extends ControllerBase
     private function placeCheckoutOrder(int $userId, CheckoutRequestDto $dto): void
     {
         try {
+            if ($this->paymentService->isOnlineProvider($dto->paymentMethod)) {
+                $this->paymentService->assertConfigured($dto->paymentMethod);
+            }
+
+            $cartItems = $this->cartService->getCartItems();
             $result = $this->orderService->placeOrder(
                 $userId,
                 $dto->shippingAddress,
@@ -128,19 +187,67 @@ class CheckoutController extends ControllerBase
             );
 
             $orderId = (int) ($result['orderId'] ?? 0);
-            $this->cartService->clearCart();
+
+            if ($this->paymentService->isOnlineProvider($dto->paymentMethod)) {
+                $returnUrl = $dto->returnUrl !== '' ? $dto->returnUrl : $this->defaultReturnUrl();
+                $payment = $this->paymentService->createPayment(
+                    $dto->paymentMethod,
+                    $orderId,
+                    (float) ($result['totalAmount'] ?? 0),
+                    $returnUrl,
+                    $cartItems
+                );
+
+                $this->jsonResponse($this->success([
+                    'orderId' => $orderId,
+                    'order' => $result,
+                    'payment' => $payment,
+                ], 'Order created. Continue to payment.'), 201);
+            }
+
+            $this->sendOrderEmail($userId, $orderId, (float) ($result['totalAmount'] ?? 0), $cartItems);
             $this->jsonResponse($this->success([
                 'orderId' => $orderId,
                 'order' => $result,
-            ], 'Order placed successfully.'), 201);
+            ], 'Order placed successfully. Your confirmation email has been sent.'), 201);
         } catch (\Throwable $e) {
             $message = (string) $e->getMessage();
             if (str_contains($message, 'orders_ibfk_1') || str_contains($message, 'FOREIGN KEY (`userId`)')) {
                 $this->jsonResponse($this->error('Authentication expired. Please log in again.'), 401);
             }
 
+            if (str_contains($message, 'Stripe is not configured') || str_contains($message, 'PayPal is not configured')) {
+                $this->jsonResponse($this->error($message), 422);
+            }
+
+            if (str_contains($message, 'Payment provider request failed') || str_contains($message, 'checkout URL')) {
+                $this->jsonResponse($this->error('Payment setup failed.', ['detail' => $message]), 422);
+            }
+
             $this->jsonResponse($this->error('Checkout failed.', ['detail' => $e->getMessage()]), 500);
         }
+    }
+
+    private function sendOrderEmail(int $userId, int $orderId, float $total, array $items): void
+    {
+        $user = $this->userRepository->findById($userId);
+        if ($user === null || trim((string) $user->email) === '') {
+            return;
+        }
+
+        $this->emailService->sendOrderConfirmation(
+            (string) $user->email,
+            (string) ($user->firstName ?: 'there'),
+            $orderId,
+            $total,
+            $items
+        );
+    }
+
+    private function defaultReturnUrl(): string
+    {
+        $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:5173');
+        return rtrim($origin, '/') . '/checkout';
     }
 
 

@@ -141,6 +141,7 @@ CREATE TABLE password_reset_tokens (
     tokenId INT AUTO_INCREMENT PRIMARY KEY,
     userId INT NOT NULL,
     token VARCHAR(255) NOT NULL UNIQUE,
+    codeHash VARCHAR(255) NOT NULL,
     expiresAt TIMESTAMP NOT NULL,
     used BOOLEAN DEFAULT FALSE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -149,9 +150,12 @@ CREATE TABLE password_reset_tokens (
     INDEX idx_user (userId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default admin user (password: Admin123!)
+-- Default accounts (match the credentials in README.md)
+--   admin@nuellasignet.com / Admin123!
+--   test@gmail.com         / Customer123!
 INSERT INTO users (email, password, firstName, lastName, role, emailVerified) VALUES
-('admin@nuellasignet.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', 'admin', TRUE);
+('admin@nuellasignet.com', '$2y$12$l5DDHdFp8zhXbDjA20BaqO1vve01qMvd0LZkxpFmCoLh3jL0mi5A2', 'Admin', 'User', 'admin', TRUE),
+('test@gmail.com', '$2y$12$PSNbZJhQVAPth5BHNdNAOODavRGF6k5.v8qR4ZEXQ9yWrGlS4XIQS', 'Test', 'Customer', 'customer', TRUE);
 
 -- Insert sample appointment slots (next 30 days, 10 AM - 4 PM)
 INSERT INTO appointment_slots (appointmentDate, startTime, endTime) VALUES

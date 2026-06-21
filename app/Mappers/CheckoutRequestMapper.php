@@ -14,7 +14,8 @@ class CheckoutRequestMapper
         return new CheckoutRequestDto(
             $shipping,
             $billing,
-            trim((string) ($data['paymentMethod'] ?? 'credit_card'))
+            trim((string) ($data['paymentMethod'] ?? 'stripe')),
+            trim((string) ($data['returnUrl'] ?? ''))
         );
     }
 }

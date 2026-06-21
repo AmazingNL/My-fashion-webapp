@@ -2,7 +2,6 @@
 
 namespace App\Core;
 
-use App\Config;
 use PDO;
 
 class RepositoryBase

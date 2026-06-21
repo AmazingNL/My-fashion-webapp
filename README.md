@@ -1,6 +1,6 @@
 # My Fashion Web App
 
-Decoupled PHP API backend for the My Fashion application. This version keeps the business logic, persistence, authentication, and admin/customer workflows in PHP, while the UI is expected to be handled by a separate Vue frontend.
+Fashion boutique web application with a custom PHP JSON API backend and a Vue/Vite frontend. The app supports customer shopping, carts, favourites, checkout, appointment booking, user settings, admin management, Mailtrap email delivery/logging, and Stripe/PayPal payment flows.
 
 ## 1. How To Run
 
@@ -26,6 +26,8 @@ docker compose up -d --build
 - App: http://localhost
 - phpMyAdmin: http://localhost:8080
 
+The Docker/nginx API is served from the root host, for example `http://localhost/products`. The Vue development client can call the API through its `/api` proxy configuration.
+
 This project follows the class Docker setup style:
 - `docker-compose.yml` for service orchestration
 - `PHP.Dockerfile` for PHP app container
@@ -40,47 +42,7 @@ This project follows the class Docker setup style:
 ### Customer account
 - Email: test@gmail.com
 - Password: Customer123!
-
-### Database credentials (Docker)
-- Host: mysql (inside Docker network) or localhost:3306 (from host)
-- Database: developmentdb
-- Username: root
-- Password: secret123
-
-## 3. Database Export And Import
-
-### Included export files
-- Root export: `lecturer_full_dump.sql`
-
-### Generate a fresh export (UTF-8 SQL)
-```bash
-docker compose exec -T mysql mariadb-dump \
-	-uroot -psecret123 \
-	--databases developmentdb \
-	--routines --events --triggers \
-	--single-transaction \
-	--default-character-set=utf8mb4 \
-	> lecturer_full_dump.sql
-```
-
-### Import export file
-```bash
-iconv -f UTF-16LE -t UTF-8 lecturer_full_dump.sql > lecturer_full_dump_utf8.sql
-docker compose exec -T mysql mariadb -uroot -psecret123 developmentdb < lecturer_full_dump_utf8.sql
-```
-
-### Verify data loaded
-```bash
-docker compose exec -T mysql mariadb -uroot -psecret123 -e "
-USE developmentdb;
-SHOW TABLES;
-SELECT 'users' AS table_name, COUNT(*) AS rows_count FROM users
-UNION ALL SELECT 'products', COUNT(*) FROM products
-UNION ALL SELECT 'orders', COUNT(*) FROM orders;
-"
-```
-
-## 4. Architecture, Patterns, And File References
+### Architecture, Patterns, And File References
 
 This is a custom PHP API project using Controller -> Service -> Repository layering.
 
@@ -99,6 +61,7 @@ This is a custom PHP API project using Controller -> Service -> Repository layer
 
 ### Frontend split
 - PHP exposes JSON endpoints for the Vue frontend.
+- Vue/Vite frontend source lives in `frontend/`.
 - Server-rendered PHP views have been removed from this version.
 - Postman resources are included for API testing and workflow checks.
 
@@ -107,25 +70,81 @@ This is a custom PHP API project using Controller -> Service -> Repository layer
 - Role-protected admin features: middleware checks in `app/Core/Middleware.php`
 - Order status transitions and business rules: `app/Controllers/OrderController.php`, `app/Services/OrderService.php`
 - Appointment slot management and monthly slot generation: `app/Controllers/AppointmentController.php`, `app/Services/AppointmentService.php`
+- Theme persistence: `frontend/src/stores/themeStore.js`
+- Local favourite hearts: `frontend/src/stores/favouriteStore.js`
+- Email sending and local email logs: `app/Services/EmailService.php`, `app/Services/EmailLogService.php`
+- Stripe/PayPal integration: `app/Services/PaymentService.php`, `app/Controllers/CheckoutController.php`
 
 ## 5. Feature Behavior Summary
 
 ### Customer side
 - Register/login
+- Forgot password with email reset code
 - Browse products and variants
-- Add/remove/update cart
-- Checkout and place orders
+- Save favourite products with heart buttons
+- Add/remove/update cart items
+- Checkout with bank transfer, Stripe, or PayPal
 - View orders and cancel allowed orders
 - Book/edit/cancel appointments
+- User settings page with bright and dark theme selection
 
 ### Admin side
-- Dashboard overview
+- Dashboard overview with split management workspaces
 - Product CRUD and variant management
 - User management (delete customer user, admin account protected)
-- Manage orders and update status
-- Manage appointment slots
+- Manage orders, view order items, and update status
+- Manage appointment slots and appointment status
+- View locally logged emails from the email service dashboard
 
-## 6. GDPR And WCAG Notes
+## 6. Important Endpoints
+
+### Public and auth
+- `GET /about`
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/password-reset`
+- `POST /auth/password-reset/verify`
+
+### Customer
+- `GET /products`
+- `GET /products/{id}`
+- `GET /cart`
+- `POST /cart/items`
+- `PATCH /cart/items`
+- `DELETE /cart`
+- `GET /checkout`
+- `POST /checkout`
+- `POST /checkout/payments/confirm`
+- `GET /checkout/confirmation/{orderId}`
+- `GET /orders`
+- `GET /orders/{orderId}`
+- `GET /favourites`
+- `DELETE /favourites`
+- `GET /appointments`
+- `GET /appointments/slots?date=YYYY-MM-DD`
+
+### Admin
+- `GET /admin/dashboard`
+- `GET /admin/users`
+- `GET /admin/products`
+- `GET /admin/products/{id}`
+- `POST /admin/products`
+- `POST /admin/products/{id}`
+- `DELETE /admin/products/{id}`
+- `GET /admin/orders`
+- `GET /admin/orders/{orderId}/items`
+- `PATCH /admin/orders/{orderId}/status`
+- `GET /admin/appointments`
+- `POST /admin/appointments/slots`
+- `PATCH /admin/appointments/{appointmentId}/status`
+- `GET /admin/emails`
+- `GET /admin/emails/{fileName}`
+
+## 7. Endpoint Smoke Test Status
+
+The current Docker environment was smoke-tested against `http://localhost` with customer and admin credentials. The test covered product browsing, login, cart, checkout, order confirmation, favourites, password reset request, appointments, admin dashboard, admin products, admin orders, admin appointments, and admin email logs. Result: 27/27 tested endpoints passed.
+
+## 8. GDPR And WCAG Notes
 
 ### GDPR efforts
 - Data minimization in UI: only necessary account and order data displayed
@@ -139,12 +158,11 @@ This is a custom PHP API project using Controller -> Service -> Repository layer
 - The API returns structured validation and status responses for frontend messaging.
 
 
-## 7. Zip Submission
+## 9. AI Disclosure
 
-Submit a `.zip` of the entire project root folder (`My-fashion-webapp`) including:
-- source code
-- Docker files
-- README
-- root database export `lecturer_full_dump.sql`
+An AI disclosure statement describing how AI tools were used during development is provided in [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md).
+
+## 10. Zip Submission
+
 
 

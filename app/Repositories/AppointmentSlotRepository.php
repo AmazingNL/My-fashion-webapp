@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use App\Repositories\Interfaces\IAppointmentSlotRepository;
+
 use App\Core\RepositoryBase;
 use App\Models\AppointmentSlot;
 use PDO;

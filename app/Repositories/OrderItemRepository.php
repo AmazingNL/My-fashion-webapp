@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use App\Repositories\Interfaces\IOrderItemRepository;
+
 use App\Core\RepositoryBase;
 use App\Models\OrderItem;
 use PDO;

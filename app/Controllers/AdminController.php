@@ -11,10 +11,11 @@ use App\Mappers\OrderMapper;
 use App\Mappers\ProductResponseMapper;
 use App\Mappers\ProductRequestMapper;
 use App\Mappers\ResponseUserMapper;
-use App\Services\IAppointmentService;
-use App\Services\IOrderService;
-use App\Services\IProductService;
-use App\Services\IUserService;
+use App\Services\EmailLogService;
+use App\Services\Interfaces\IAppointmentService;
+use App\Services\Interfaces\IOrderService;
+use App\Services\Interfaces\IProductService;
+use App\Services\Interfaces\IUserService;
 use RuntimeException;
 
 class AdminController extends ControllerBase
@@ -23,17 +24,20 @@ class AdminController extends ControllerBase
     private IUserService $userService;
     private IOrderService $orderService;
     private IAppointmentService $appointmentService;
+    private EmailLogService $emailLogService;
 
     public function __construct(
         IProductService $productService,
         IUserService $userService,
         IOrderService $orderService,
-        IAppointmentService $appointmentService
+        IAppointmentService $appointmentService,
+        ?EmailLogService $emailLogService = null
     ) {
         $this->productService = $productService;
         $this->userService = $userService;
         $this->orderService = $orderService;
         $this->appointmentService = $appointmentService;
+        $this->emailLogService = $emailLogService ?? new EmailLogService();
     }
 
     public function dashboard(): void
@@ -93,6 +97,34 @@ class AdminController extends ControllerBase
             ]));
         } catch (\Throwable $e) {
             $this->jsonResponse($this->error('Failed to load orders.', ['detail' => $e->getMessage()]), 500);
+        }
+    }
+
+    public function emailLogs(): void
+    {
+        try {
+            Middleware::requireAdmin();
+
+            $this->jsonResponse($this->success([
+                'emails' => $this->emailLogService->listEmails(),
+            ]));
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load emails.', ['detail' => $e->getMessage()]), 500);
+        }
+    }
+
+    public function emailLog(string $fileName): void
+    {
+        try {
+            Middleware::requireAdmin();
+
+            $this->jsonResponse($this->success([
+                'email' => $this->emailLogService->getEmail($fileName),
+            ]));
+        } catch (\RuntimeException $e) {
+            $this->jsonResponse($this->error($e->getMessage()), 404);
+        } catch (\Throwable $e) {
+            $this->jsonResponse($this->error('Failed to load email.', ['detail' => $e->getMessage()]), 500);
         }
     }
 
@@ -189,6 +221,10 @@ class AdminController extends ControllerBase
                 $this->jsonResponse($this->error($imageError), 422);
             }
 
+            if ($imagePath === null) {
+                $this->jsonResponse($this->error('Product image is required.'), 422);
+            }
+
             $dto = ProductRequestMapper::mapToProductRequestDto($this->requestData(), $imagePath);
             $product = ProductRequestMapper::mapToProduct($dto);
             $variants = ProductRequestMapper::mapToVariantInputRows($dto->variants);
@@ -198,7 +234,13 @@ class AdminController extends ControllerBase
                 $this->jsonResponse($this->error('Product validation failed.', (array) $result['errors']), 422);
             }
 
-            $this->jsonResponse($this->success($result, 'Product and variants added successfully.'), 201);
+            $productId = (int) ($result['productId'] ?? 0);
+            $savedProduct = $productId > 0 ? $this->productService->getProductById($productId) : null;
+
+            $this->jsonResponse($this->success(ProductResponseMapper::mapToProductDetailsDto(
+                $savedProduct ?? $product,
+                $productId > 0 ? $this->productService->getVariantsByProductId($productId) : []
+            ), 'Product and variants added successfully.'), 201);
         } catch (\Throwable $e) {
             $this->jsonResponse($this->error('An unexpected error occurred.', ['detail' => $e->getMessage()]), 500);
         }
@@ -248,9 +290,10 @@ class AdminController extends ControllerBase
 
             $variantRows = ProductRequestMapper::mapToVariantChangeDtos($this->requestData());
             $this->productService->applyVariantChanges($productId, $variantRows);
+            $savedProduct = $this->productService->getProductById($productId) ?? $product;
 
             $this->jsonResponse($this->success(ProductResponseMapper::mapToProductDetailsDto(
-                $product,
+                $savedProduct,
                 $this->productService->getVariantsByProductId($productId)
             ), 'Product updated successfully.'));
         } catch (\Throwable $e) {

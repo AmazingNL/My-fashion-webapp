@@ -11,7 +11,8 @@ final class CheckoutRequestDto implements JsonSerializable
     public function __construct(
         public readonly string $shippingAddress,
         public readonly string $billingAddress,
-        public readonly string $paymentMethod
+        public readonly string $paymentMethod,
+        public readonly string $returnUrl = ''
     ) {
     }
 

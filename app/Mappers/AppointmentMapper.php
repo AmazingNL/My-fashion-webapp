@@ -25,7 +25,8 @@ class AppointmentMapper
 
     public static function mapToAppointmentDtos(array $appointments): array
     {
-        return array_map(static fn($appointment): AppointmentDto => self::mapToAppointmentDto($appointment), $appointments);
+        return array_map(static fn($appointment): 
+        AppointmentDto => self::mapToAppointmentDto($appointment), $appointments);
     }
 
     private static function value($source, string $key, $default = null)

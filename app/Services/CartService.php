@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Services\Interfaces\ICartService;
+
 use App\DTO\CartItemRequestDto;
-use App\Repositories\ICartRepository;
-use App\Repositories\IProductRepository;
+use App\Repositories\Interfaces\ICartRepository;
+use App\Repositories\Interfaces\IProductRepository;
 use Exception;
 
 class CartService implements ICartService

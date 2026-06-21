@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\ControllerBase;
-use App\Services\IProductService;
+use App\Services\Interfaces\IProductService;
 
 class FavouriteController extends ControllerBase
 {

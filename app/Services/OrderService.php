@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Services\Interfaces\IOrderService;
+
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\PaymentStatus;
-use App\Repositories\IOrderRepository;
+use App\Repositories\Interfaces\IOrderRepository;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -106,6 +108,16 @@ class OrderService implements IOrderService
     {
         $this->requireOrder($orderId); // ensures order exists
         return $this->orderItemService->getByOrderId($orderId);
+    }
+
+    public function markPaymentCompleted(int $orderId): bool
+    {
+        $this->requireOrder($orderId);
+        return (bool) $this->orderRepo->updateStatus(
+            $orderId,
+            OrderStatus::PROCESSING->value,
+            PaymentStatus::COMPLETED->value
+        );
     }
 
 

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Services\Interfaces\IUserService;
+
 use App\Models\User;
-use App\Repositories\IUserRepository;
+use App\Repositories\Interfaces\IUserRepository;
 use App\DTO\LoginDto;
 use DateTime;
 

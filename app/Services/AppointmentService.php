@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Services\Interfaces\IAppointmentService;
+
 use Exception;
 use App\Models\Appointment;
 use App\Models\AppointmentSlot;
 use App\Models\AppointmentStatus;
-use App\Repositories\IAppointmentRepository;
-use App\Repositories\IAppointmentSlotRepository;
+use App\Repositories\Interfaces\IAppointmentRepository;
+use App\Repositories\Interfaces\IAppointmentSlotRepository;
 
 final class AppointmentService implements IAppointmentService
 {

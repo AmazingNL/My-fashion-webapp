@@ -8,7 +8,7 @@ use App\Core\ControllerBase;
 use App\Core\Middleware;
 use App\DTO\CartItemRequestDto;
 use App\Mappers\CartMapper;
-use App\Services\ICartService;
+use App\Services\Interfaces\ICartService;
 
 class CartController extends ControllerBase
 {
